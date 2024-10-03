@@ -257,8 +257,8 @@ OPT_PH= odeset('AbsTol',0.01);
 OPT_STh = odeset('AbsTol',0.02);
 OPT_VegSnow = 1;
 OPT_SoilTemp = 1;
-OPT_FR_SOIL = 1; 
-OPT_min_SPD = 0.006; %% [m] minimum snow pack depth to have a multilayer snow 
+OPT_FR_SOIL = 0; 
+OPT_min_SPD = 0.006; %% [m] Minimum snowpack depth to have a multilayer snow (inf = 1 layer, 0.006 = standard 2-layer)
 %%%%
 if  not(exist('OPT_VCA','var'))
     OPT_VCA = 0;
@@ -538,7 +538,7 @@ for i=2:NN
         Tdew(i),t_sls(i-1),ros(i-1),SP_wc(i-1),fpr,Pr_sno(pdind),...
         Urb_Par,In_max_urb,In_max_rock,K_usle,tau_sno(i-1),Ta(pdind),Slo_top,Slo_pot,Asur,Ared,aTop,EK(i-1),q_runon(i),Qi_in(i,:),...
         pow_dis,a_dis,Salt(i),...
-        SPAR,SN,OPT_min_SPD,OPT_VegSnow,OPT_SoilTemp,OPT_PlantHydr,Opt_CR,Opt_ST,Opt_ST2,OPT_SM,OPT_STh,OPT_FR_SOIL,OPT_PH,parameterize_phase);
+        SPAR,SN,OPT_min_SPD,OPT_VegSnow,OPT_SoilTemp,OPT_PlantHydr,Opt_CR,Opt_ST,Opt_ST2,OPT_SM,OPT_STh,OPT_FR_SOIL,OPT_PH,OPT_Pr_Part,hSTL);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%
     Tstm0 =2*Ts(i)-Ts(i-1);
     %%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -553,10 +553,6 @@ for i=2:NN
     CK1(i) = f(i)*dth*Asur*Ared + sum(V(i-1,:) - V(i,:))*Asur*Ared + sum(Vice(i-1,:) - Vice(i,:))*Asur*Ared - EG(i)*dth - Lk(i)*dth ...
         - sum(Qi_out(i,:))*dth -Rd(i) -sum(Jsx_L(i,:)).*dth -sum(Jsx_H(i,:)).*dth  + sum(Qi_in(i,:))*dth  ;
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Snow to ice conversion at the end of a hydrological year
-    if (Datam(i,4)==1) && (Datam(i,3)==30) && (Datam(i,2)==9) && (SND(i) > 0)
-        [ICE(i),ICE_D(i),SWE(i),SND(i)]=Snow2Ice_cap(Asur, 2000, SWE(i), ICE(i),ros(i));
-    end 
 end
 %close(bau)
 Computational_Time =toc;

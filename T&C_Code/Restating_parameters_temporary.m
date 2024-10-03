@@ -63,7 +63,7 @@ SnowIce_Param.Ice_wc_sp=Ice_wc_sp;
 SnowIce_Param.ros_Ice_thr=ros_Ice_thr;
 SnowIce_Param.Aice=Aice;
 %%%%%%%%% Optical Thermal Properties other surfaces
-if not(exist('dbThick','var')) || dbThick == 0
+if not(exist('dbThick','var')) || dbThick == 0 || isnan(dbThick)
     Deb_Par.alb= 0.13 ;
     Deb_Par.e_sur =  0.94;
     Deb_Par.lan = 0.94;
@@ -74,14 +74,26 @@ if not(exist('dbThick','var')) || dbThick == 0
     Zs_deb=[]; 
 else
     if dbThick>5
-        nst=10;
+        nst=8;
         k=(dbThick/5)^(1/(nst-1));
         Zs_deb = [0 5*k.^(1:nst-1)]; %% [mm]
-        clear nst k
+        Deb_Par.alb= 0.13 ;
+        Deb_Par.e_sur =  0.94;
+        Deb_Par.lan = 0.94;
+        Deb_Par.rho = 1496;  % [kg/m^3]
+        Deb_Par.cs = 948;   % [J/kg K]
+        Deb_Par.zom = 0.016 ;
+        clearvars nst k
     else
         disp('Debris is not thick enough')
         return
     end
+end
+%%%%
+if not(exist('Urb_Par','var'))
+    Urb_Par.alb= 0.15;
+    Urb_Par.e_sur= 0.92;
+    Urb_Par.zom= 1;
 end
 %%%%% Vegetation High Parameters
 VegH_Param.KnitH=KnitH;
@@ -107,6 +119,14 @@ VegH_Param.Cl_H=Cl_H;
 VegH_Param.Kx_max_H=Kx_max_H;
 VegH_Param.PsiX50_H=PsiX50_H;
 VegH_Param.Cx_H=Cx_H;
+
+if not(exist('Osm_reg_Max_H','var'))
+    VegH_Param.Osm_reg_Max_H = 0*ones(1,cc);
+    VegH_Param.eps_root_base_H=  0.9*ones(1,cc);
+else
+    VegH_Param.Osm_reg_Max_H = Osm_reg_Max_H;   
+    VegH_Param.eps_root_base_H=  eps_root_base_H; 
+end
 %%%%% Vegetation Low Parameters
 VegL_Param.KnitL=KnitL;
 VegL_Param.mSl_L=mSl_L;
@@ -132,6 +152,13 @@ VegL_Param.Kx_max_L=Kx_max_L;
 VegL_Param.PsiX50_L=PsiX50_L;
 VegL_Param.Cx_L=Cx_L;
 
+if not(exist('Osm_reg_Max_L','var'))
+    VegL_Param.Osm_reg_Max_L = 0*ones(1,cc);
+    VegL_Param.eps_root_base_L=  0.9*ones(1,cc);
+else
+    VegL_Param.Osm_reg_Max_L = Osm_reg_Max_L;   
+    VegL_Param.eps_root_base_L=  eps_root_base_L; 
+end
 %%%%% Vegetation High Parameters for vegetation dynamics 
 VegH_Param_Dyn.Sl = Sl_H; 
 VegH_Param_Dyn.mSl = mSl_H; 
@@ -172,10 +199,18 @@ VegH_Param_Dyn.PsiL00 = PsiL00_H;
 if not(exist('soCrop_H','var'))
     VegH_Param_Dyn.soCrop = NaN*ones(1,cc);
     VegH_Param_Dyn.MHcrop=  NaN*ones(1,cc);
+    VegH_Param_Dyn.Sl_emecrop=  NaN*ones(1,cc);
 else
     VegH_Param_Dyn.soCrop = soCrop_H;  
-    VegH_Param_Dyn.MHcrop=  MHcrop_H; 
+    VegH_Param_Dyn.MHcrop=  MHcrop_H;
+    VegH_Param_Dyn.Sl_emecrop= Sl_emecrop_H;
 end
+
+if not(exist('a_root_H','var'))
+    a_root_H=0.001; 
+else
+    a_root_H=a_root_H; 
+end 
 
 %%%%% Vegetation Low Parameters for vegetation dynamics 
 VegL_Param_Dyn.Sl = Sl_L; 
@@ -217,7 +252,15 @@ VegL_Param_Dyn.PsiL00 = PsiL00_L;
 if not(exist('soCrop_L','var'))
     VegL_Param_Dyn.soCrop = NaN*ones(1,cc);
     VegL_Param_Dyn.MHcrop=  NaN*ones(1,cc);
+    VegL_Param_Dyn.Sl_emecrop=  NaN*ones(1,cc);
 else
     VegL_Param_Dyn.soCrop = soCrop_L;  
     VegL_Param_Dyn.MHcrop=  MHcrop_L; 
-end               
+    VegL_Param_Dyn.Sl_emecrop= Sl_emecrop_L;
+end
+
+if not(exist('a_root_L','var'))
+    a_root_L=0.001; 
+else
+    a_root_L=a_root_L; 
+end 

@@ -3,7 +3,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function[BiogeoPar]=Biogeochemistry_Parameter(opt_cons_CUE)
 %%%%%%%%%%%%%%
-%%%% Decay Constant on a 40?C basis (Kirschbaum 2002)
+%%%% Decay Constant on a 40°C basis (Kirschbaum 2002)
 BiogeoPar.k_met_sur = 1/12.5; %%[1/day]
 BiogeoPar.k_str_sur = 1/46; %% %[1/day]
 BiogeoPar.k_met_ssr =  1/10;
@@ -67,7 +67,7 @@ BiogeoPar.T3= 15; % Temperature Earthworms
 BiogeoPar.T4= 40; %%% Ref. Temp. Litter Decoomposition
 %%%%%%%%
 %%%%%
-BiogeoPar.mtem = -0.008; %%[?C] [0 - 0.016] Allison et al 2010; Li et al 2014
+BiogeoPar.mtem = -0.008; %%[°C] [0 - 0.016] Allison et al 2010; Li et al 2014
 if opt_cons_CUE == 1
     BiogeoPar.rr_met_sur = 0.55;
     BiogeoPar.rr_str_sur=  0.45;
@@ -83,10 +83,10 @@ BiogeoPar.lambda_K=0.90;
 BiogeoPar.f_org_lea=1; %% Fraction of Organic leaching 
 %%%%%%%%%%%%%%%%%% Earthworm parameters 
 %BiogeoPar.kse =  5e-004 ; % [gC/ gsoil] half-saturation constant for consumption of food %
-%BiogeoPar.VmaxE = 0.038 ; %[gC / gC-EW d] Ref earthworm growth 15?C
+%BiogeoPar.VmaxE = 0.038 ; %[gC / gC-EW d] Ref earthworm growth 15°C
 BiogeoPar.VmaxE = 0.0050 ; %%  [gC / gC-food d]
-BiogeoPar.rmanEa= 0.0300 ; %% [gC / gC-EW d] Maint. respiration 15?C 
-BiogeoPar.rmanEp= 0.0146 ; %% [gC / gC-EW d] Maint. respiration 15?C 
+BiogeoPar.rmanEa= 0.0300 ; %% [gC / gC-EW d] Maint. respiration 15°C 
+BiogeoPar.rmanEp= 0.0146 ; %% [gC / gC-EW d] Maint. respiration 15°C 
 BiogeoPar.dew = 0.010; % %% [gC / gC-EW d] 
 BiogeoPar.fabsE =0.15; % [-] fraction of absorbed food 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -37,7 +37,7 @@ AH = max(0.1,Bfac); %% Moisture Stress
 Al = max(exp(-ke*(LAI)),0.1); %% Light Lack of
 %%% Nutrient Release --  
 ANH =1;% min(1,max(0.5,Se)); %% Nitrogen Moisture Stress
-%To = 30; Tc= 10;%%[ï¿½C]
+%To = 30; Tc= 10;%%[°C]
 ANT = 1; % min(1,max(0.1,2^((Ts -To)/Tc))); %% Nitrogen Temp Stress
 FNC= max(0.1,FNC); 
 AN = ANH*ANT*FNC; %% Nitrogen Stress

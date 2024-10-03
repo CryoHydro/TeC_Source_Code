@@ -26,8 +26,7 @@ function[snow_alb,tau_sno,e_sno]=Albedo_Snow_Properties(dt,SWE,h_S,Ts,Ta,SWEtm1,
 %%% Cice = glacier or not
 %%% Pr_sno = snowfall
 Pr_sno_day= Pr_sno_day+Pr_sno*dt/3600; %% [mm] 
-if size(Ta_day,1)==1; Ta_day=Ta_day';end
-%Ta_day = [Ta_day(2:end); Ta]; %%[ï¿½C]
+Ta_day= [reshape(Ta_day(2:length(Ta_day)),1,length(Ta_day)-1), Ta]; %%[°C]
 %%% OUTPUT
 % tau_sno [] %% Relative Age of snow
 %snow_alb.dir_vis
@@ -39,16 +38,14 @@ if size(Ta_day,1)==1; Ta_day=Ta_day';end
 %%%%%%%%%%%%%%%%%%%%
 e_sno = 0.97; %%% Snow emissivity
 %%%%%%%%%%
-
 %Choose method based on if glacier or not
 % if Cice==1
 %     ANS=4; %Use snow on glacier albedo
 % else
 %     ANS=2; %Use previous method for most surfaces
 % end
-ANS=5;
+ANS=4;
 %%%%%%%
-
 switch ANS
     case 1
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -190,8 +187,9 @@ switch ANS
         if Asno>0.85
             Asno=0.85;
         elseif isnan(Asno)
-            Asno=a_u; %So if=NaN (only occurs under conditions of Csno=1, SWE=0 and ATa=0, so its cold but the snow has melted, therefore give the underlying albedo)
-        end
+            Asno=a_u; %So if=NaN (only occurs under conditions of Csno=1, SWE=0 and ATa=0, so its cold but the snow has melted, therefore assign the underlying albedo)
+        end 
+        
         snow_alb.dir_vis = Asno;
         snow_alb.dir_nir = Asno;
         snow_alb.dif_vis = Asno;
@@ -202,10 +200,10 @@ switch ANS
         %   Snow albedo function as described in Ding et al. (2017)
         
         %%%%%
-        Asnotm1= tau_snotm1; 
+        Asnotm1= tau_snotm1;
         
         Amax = 0.85;
-        Amin = 0.4;
+        Amin = 0.5;
         if Cice == 1
             if Cdeb == 1
                 Amin =  Deb_Par.alb;
@@ -217,11 +215,12 @@ switch ANS
         Asnotm1(Asnotm1<Amin)=Amin;
         Asnotm1(Asnotm1>Amax)=Amax;
         %%%%%%%%%%%%%
-        if Pr_sno > 0 %possibility to use a threshold with Pr_sno_day, as in Brock method, if to many refreshings occur
+        if Pr_sno > 0.0
             %%%% Fresh snow falling 
             row = 1000; % water density [kg/m^3]
             Ta_day=mean(Ta_day); 
             ros_n = 1000*(0.05 + (((9/5)*Ta_day +32)> 0).*(((9/5)*Ta_day+32)./100).^2); %% [kg/m^3] new snow density [from Bras 1990]
+            ros_n(ros_n > 158.5) = 158.5; % Added MM 04/04/2024
             dsn = 0.001*Pr_sno_day*row/ros_n ; %%%[m] the new cumulative snowfall depth since the beginning of the snowfall event
             
             ros_nd = ros_n; %% density of dry snow  --- [kg/m^3] assumed to be the density of the new snow 

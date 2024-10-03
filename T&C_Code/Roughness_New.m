@@ -2,8 +2,7 @@
 %   Subfunction  Roughness                  %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function[zom,zoh,disp_h,zom_H,zom_L,zoh_H,zoh_L,d_H,d_L,zom_other]=Roughness_New(D,ydepth,ICE_D,Cdeb,Deb_Par,Urb_Par,...
-    hc_H,hc_L,LAI_H,Ccrown_L,Cwat,Curb,Crock,Cice)
+function[zom,zoh,disp_h,zom_H,zom_L,zoh_H,zoh_L,d_H,d_L,zom_other]=Roughness_New(D,ydepth,ICE_D,Cdeb,Deb_Par,Urb_Par,hc_H,hc_L,LAI_H,Ccrown_L,Cwat,Curb,Crock,Cice)
 %%%%%%%%%%%%%%%%%%%%
 %%REFERENCES %%   [Strack et al.,  2004]  --  [Brutsaert (1975)] --
 %%% Mahat et al 2013

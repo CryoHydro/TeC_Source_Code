@@ -29,102 +29,102 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Pr_tg = mean(Pr_S(Kinde)); %%% [mm]
-Ta_tg = mean(Ta_S(Kinde)); %%% [캜]
+Ta_tg = mean(Ta_S(Kinde)); %%% [째C] 
 Ws_tg = mean(Ws_S(Kinde)); %%% [m/s]
-Ds_tg = mean(Ds_S(Kinde)); %%% [캜]
-ea_tg = mean(ea_S(Kinde)); %%% [Pa]
-N_tg = mean(N_S(Kinde)); %%% [-]
-Pre_tg = mean(Pre_S(Kinde)); %%% [mbar]
-Tdew_tg = mean(Tdew_S(Kinde)); %%% [캜]
-Rsw_space = SAB1_S+ SAB2_S + SAD1_S+ SAD2_S;
-Rsw_tg = mean(Rsw_space(Kinde)); %%% [W/m^2]
+Ds_tg = mean(Ds_S(Kinde)); %%% [째C] 
+ea_tg = mean(ea_S(Kinde)); %%% [Pa] 
+N_tg = mean(N_S(Kinde)); %%% [-] 
+Pre_tg = mean(Pre_S(Kinde)); %%% [mbar] 
+Tdew_tg = mean(Tdew_S(Kinde)); %%% [째C] 
+Rsw_space = SAB1_S+ SAB2_S + SAD1_S+ SAD2_S; % 
+Rsw_tg = mean(Rsw_space(Kinde)); %%% [W/m^2] 
 PAR_space = PARB_S + PARD_S; %%% %% [W/m^2]
 PAR_tg= mean(PAR_space(Kinde));%% [W/m^2]
 Ca_tg = mean(Ca_S(Kinde)); %% [ppm]
 %%%%%
-Ts_tg  =  mean(Ts(Kinde));%% [캜]
-Tdamp_tg  = mean(Tdamp(Kinde));%% [캜]
+Ts_tg  =  mean(Ts(Kinde));%% [째C]
+Tdamp_tg  = mean(Tdamp(Kinde));%% [째C]
 Csno_tg = mean(Csno(Kinde)); %%[]
 Cice_tg = mean(Cice(Kinde)); %%[]
-Csnow_tg = mean(Csnow(Kinde)); %%[]
-Cicew_tg = mean(Cicew(Kinde)); %%[]
-Pr_sno_tg  =  mean(Pr_sno(Kinde));%%[mm]
-Pr_liq_tg = mean(Pr_liq(Kinde)); %%[mm]
+Csnow_tg = mean(Csnow(Kinde)); %%[] 
+Cicew_tg = mean(Cicew(Kinde)); %%[] 
+Pr_sno_tg  =  mean(Pr_sno(Kinde));%%[mm] 
+Pr_liq_tg = mean(Pr_liq(Kinde)); %%[mm] 
 %%%%
-Rn_tg=mean(Rn(Kinde));%% [W/m^2]
-H_tg=mean(H(Kinde));%% [W/m^2]
-G_tg=mean(G(Kinde));%% [W/m^2]
-Gfin_tg=mean(Gfin(Kinde)); % [W/m^2]
-QE_tg=mean(QE(Kinde));%% [W/m^2]
-Qv_tg = mean(Qv(Kinde)); %% [W/m^2]
-Qfm_tg =  mean(Qfm(Kinde));% [W/m^2]
+Rn_tg=mean(Rn(Kinde));%% [W/m^2] 
+H_tg=mean(H(Kinde));%% [W/m^2] 
+G_tg=mean(G(Kinde));%% [W/m^2] 
+Gfin_tg=mean(Gfin(Kinde)); % [W/m^2] 
+QE_tg=mean(QE(Kinde));%% [W/m^2]  
+Qv_tg = mean(Qv(Kinde)); %% [W/m^2] 
+Qfm_tg =  mean(Qfm(Kinde));% [W/m^2] 
 %%%%
-SWE_tg = mean(SWE(Kinde)); %% [mm]
-SND_tg = mean(SND(Kinde)); %% [m]
-WR_SP_tg = mean(WR_SP(Kinde)); %%[mm]
-U_SWE_tg = mean(U_SWE(Kinde)); %%[mm]
-NIn_SWE_tg  =  mean(NIn_SWE(Kinde));%% [mm]
-dw_SNO_tg=mean(dw_SNO(Kinde)); %%[]
-ros_tg = mean(ros(Kinde)); %% [kg/m^3]
-In_SWE_tg =  mean(In_SWE(Kinde)); %%[mm]
-SP_wc_tg =  mean(SP_wc(Kinde));%%[mm]
+SWE_tg = mean(SWE(Kinde)); %% [mm] 
+SND_tg = mean(SND(Kinde)); %% [m] 
+WR_SP_tg = mean(WR_SP(Kinde)); %%[mm] 
+U_SWE_tg = mean(U_SWE(Kinde)); %%[mm] 
+NIn_SWE_tg  =  mean(NIn_SWE(Kinde));%% [mm] 
+dw_SNO_tg=mean(dw_SNO(Kinde)); %%[] 
+ros_tg = mean(ros(Kinde)); %% [kg/m^3] 
+In_SWE_tg =  mean(In_SWE(Kinde)); %%[mm] 
+SP_wc_tg =  mean(SP_wc(Kinde));%%[mm] 
 %%%%
-ICE_tg = mean(ICE(Kinde)); %% [mm]
-ICE_D_tg = mean(ICE_D(Kinde)); %% [m]
-WR_IP_tg = mean(WR_IP(Kinde)); %%[mm]
-IP_wc_tg =  mean(IP_wc(Kinde));%%[mm]
-NIce_tg  =  mean(NIce(Kinde));%% [mm]
+ICE_tg = mean(ICE(Kinde)); %% [mm] 
+ICE_D_tg = mean(ICE_D(Kinde)); %% [m] 
+WR_IP_tg = mean(WR_IP(Kinde)); %%[mm] 
+IP_wc_tg =  mean(IP_wc(Kinde));%%[mm] 
+NIce_tg  =  mean(NIce(Kinde));%% [mm] 
 %%%
-Imelt_tg = mean(Imelt(Kinde)); %% [mm]
-Smelt_tg = mean(Smelt(Kinde)); %% [mm]
-Tice_tg =  mean(Tice(Kinde)); %% [C]
+Imelt_tg = mean(Imelt(Kinde)); %% [mm] 
+Smelt_tg = mean(Smelt(Kinde)); %% [mm] 
+Tice_tg =  mean(Tice(Kinde)); %% [C] 
 %%%%%%%%%
-T_H_space = sum(T_H,2);
-T_L_space = sum(T_L,2);
-T_H_tg = mean(T_H_space(Kinde)); %%%[mm/h]
-T_L_tg = mean(T_L_space(Kinde)); %%%[mm/h]
-T_tg= T_L_tg +T_H_tg  ; %%% [mm/h]
-EIn_H_space = sum(EIn_H,2);
-EIn_L_space = sum(EIn_L,2);
-EIn_L_tg  = mean(EIn_L_space(Kinde)); %%% [mm/h]
-EIn_H_tg =  mean(EIn_H_space(Kinde)); %%% [mm/h]
-EIn_tg =EIn_H_tg+ EIn_L_tg; %%% [mm/h]
-EG_tg =mean(EG(Kinde)); %%% [mm/h]
-ESN_tg =mean(ESN(Kinde)+ESN_In(Kinde)); %%% [mm/h]
-EWAT_tg = mean(EWAT(Kinde)); %%[mm/h]
-EICE_tg = mean(EICE(Kinde)); %%[mm/h]
-Dr_H_space = sum(Dr_H,2);
-Dr_L_space = sum(Dr_L,2);
-Dr_L_tg  = mean(Dr_L_space(Kinde)); %%% [mm]
-Dr_H_tg =  mean(Dr_H_space(Kinde)); %%% [mm]
+T_H_space = sum(T_H,2); % 
+T_L_space = sum(T_L,2); % 
+T_H_tg = mean(T_H_space(Kinde)); %%%[mm/h] 
+T_L_tg = mean(T_L_space(Kinde)); %%%[mm/h] 
+T_tg= T_L_tg +T_H_tg  ; %%% [mm/h] 
+EIn_H_space = sum(EIn_H,2); % 
+EIn_L_space = sum(EIn_L,2); % 
+EIn_L_tg  = mean(EIn_L_space(Kinde)); %%% [mm/h] 
+EIn_H_tg =  mean(EIn_H_space(Kinde)); %%% [mm/h] 
+EIn_tg =EIn_H_tg+ EIn_L_tg; %%% [mm/h] 
+EG_tg =mean(EG(Kinde)); %%% [mm/h] 
+ESN_tg =mean(ESN(Kinde)+ESN_In(Kinde)); %%% [mm/h] 
+EWAT_tg = mean(EWAT(Kinde)); %%[mm/h] 
+EICE_tg = mean(EICE(Kinde)); %%[mm/h] 
+Dr_H_space = sum(Dr_H,2); % 
+Dr_L_space = sum(Dr_L,2); % 
+Dr_L_tg  = mean(Dr_L_space(Kinde)); %%% [mm] 
+Dr_H_tg =  mean(Dr_H_space(Kinde)); %%% [mm] 
 %%%%%%%%%%%%%%%%
-EIn_urb_tg = mean(EIn_urb(Kinde)); %%[mm/h]
-EIn_rock_tg = mean(EIn_rock(Kinde)); %%[mm/h]
-SE_rock_tg = mean(SE_rock(Kinde)); %%[]
-SE_urb_tg = mean(SE_urb(Kinde)); %%[]
+EIn_urb_tg = mean(EIn_urb(Kinde)); %%[mm/h] 
+EIn_rock_tg = mean(EIn_rock(Kinde)); %%[mm/h] 
+SE_rock_tg = mean(SE_rock(Kinde)); %%[] 
+SE_urb_tg = mean(SE_urb(Kinde)); %%[] 
 %%%
-In_H_space = sum(In_H,2);
-In_L_space = sum(In_L,2);
-In_urb_tg =  mean(In_urb(Kinde)); %%[mm]
-In_rock_tg =  mean(In_rock(Kinde)); %%[mm]
+In_H_space = sum(In_H,2); % 
+In_L_space = sum(In_L,2); % 
+In_urb_tg =  mean(In_urb(Kinde)); %%[mm] % 
+In_rock_tg =  mean(In_rock(Kinde)); %%[mm] 
 In_tg = mean(In_H_space(Kinde) +  In_L_space(Kinde) +  SP_wc(Kinde) + In_SWE(Kinde) + In_urb(Kinde) + In_rock(Kinde)+ IP_wc(Kinde) ); %%% [mm]
-Inveg_tg = mean(In_H_space(Kinde) +  In_L_space(Kinde));
+Inveg_tg = mean(In_H_space(Kinde) +  In_L_space(Kinde)); % 
 %%%
-WAT_tg= mean(WAT(Kinde)) ;%%%[mm]
-FROCK_tg = mean(FROCK(Kinde)); %%%[mm]
+WAT_tg= mean(WAT(Kinde)) ;%%%[mm] 
+FROCK_tg = mean(FROCK(Kinde)); %%%[mm] 
 %%%
-f_tg = mean(f(Kinde)*dth); %%[mm]
-WIS_tg = mean(WIS(Kinde)); %%[mm]
-Rd_tg =mean(Rd(Kinde)); %% [mm]
-Rh_tg =mean(Rh(Kinde)); %%[mm]
-Lk_tg =mean(Lk(Kinde)*dth); %% [mm]
-Lk_wat_tg =mean(Lk_wat(Kinde)*dth); %% [mm]
-Lk_rock_tg =mean(Lk_rock(Kinde)*dth); %% [mm]
+f_tg = mean(f(Kinde)*dth); %%[mm] 
+WIS_tg = mean(WIS(Kinde)); %%[mm] 
+Rd_tg =mean(Rd(Kinde)); %% [mm] 
+Rh_tg =mean(Rh(Kinde)); %%[mm] 
+Lk_tg =mean(Lk(Kinde)*dth); %% [mm] 
+Lk_wat_tg =mean(Lk_wat(Kinde)*dth); %% [mm] 
+Lk_rock_tg =mean(Lk_rock(Kinde)*dth); %% [mm] 
 %%%
-OF_tg = mean(OF(Kinde)); %%[]
-OS_tg = mean(OS(Kinde)); %%[]
-ZWT_tg= mean(ZWT(Kinde)); %% [mm]
-Fract_sat_tg = sum(ZWT(Kinde)==0)/num_cell;%% [-]
+OF_tg = mean(OF(Kinde)); %%[] 
+OS_tg = mean(OS(Kinde)); %%[] 
+ZWT_tg= mean(ZWT(Kinde)); %% [mm] 
+Fract_sat_tg = sum(ZWT(Kinde)==0)/num_cell;%% [-] 
 %%%%%%%%
 Qi_in_space = sum(Qi_in*dth,2);
 Qi_out_space = sum(Qi_out*dth,2);
@@ -145,20 +145,29 @@ r_soil_tg  =  mean(r_soil(Kinde));%% [s/m]
 alp_soil_tg = mean(alp_soil(Kinde)); %%[-]
 %%%%
 Tdp_space =  mean(Tdp,2); %%%
-Tdp_tg = mean(Tdp_space(Kinde)); %% % [캜]
+Tdp_tg = mean(Tdp_space(Kinde)); %% % [째C]
 Tdpsnow_space =  mean(Tdpsnow,2); %%%
-Tdpsnow_tg = mean(Tdpsnow_space(Kinde)); %% % [캜]
+Tdpsnow_tg = mean(Tdpsnow_space(Kinde)); %% % [째C]
 %%%%
 er_tg =  mean(er(Kinde)); %%  % [kg/s m^2]
 %%%
-TsVEG_tg  =  mean(TsVEG(Kinde));%% [캜]
-Ts_under_tg  =  mean(Ts_under(Kinde));%% [캜]
+TsVEG_tg  =  mean(TsVEG(Kinde));%% [째C]
+Ts_under_tg  =  mean(Ts_under(Kinde));%% [째C]
 DQ_S_tg = mean(DQ_S(Kinde)); %%[]
 DT_S_tg = mean(DT_S(Kinde)); %%[]
 dQ_S_tg = mean(dQ_S(Kinde)); %%[]
 CK1_tg=  mean(CK1(Kinde));%% [mm]
 %CK2_tg =  mean(CK2(Kinde));%% [mm]
 %%%%%%
+Csno10 = SND >= 0.01;
+Csno10_tg = mean(Csno10(Kinde)); % Snow fraction 10 mm
+Csno50 = SND >= 0.05;
+Csno50_tg = mean(Csno50(Kinde)); % Snow fraction 50 mm
+Csno100 = SND >= 0.1;
+Csno100_tg = mean(Csno100(Kinde)); % Snow fraction 100 mm
+%%%%%
+LAI_tg = mean(LAI_H(Kinde).*VEG_FRACn(Kinde)+LAI_L(Kinde).*VEG_FRACn(Kinde));
+NDVI_tg = mean(NDVI(Kinde));
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%% SIMPLE MASS CHECK CONTROL
@@ -190,12 +199,35 @@ end
 %    + (In_tgtm1 -In_tg) -sum(Dr_H_tg)*Csno_tg ; %% Not correct
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%%%%%%%%%%%%%%%%%%% Variable names %%%%%%%%%%%%%%%%%%%%%%%
+vars_avg = {'Pr_tg','Ta_tg','Ws_tg','Ds_tg','ea_tg','N_tg','Pre_tg',...
+    'Tdew_tg','Rsw_tg','PAR_tg','Ca_tg','Ts_tg','Tdamp_tg','Csno_tg',...
+    'Cice_tg','Csnow_tg','Cicew_tg','Pr_sno_tg','Pr_liq_tg','Rn_tg',...
+    'H_tg','G_tg','Gfin_tg','QE_tg','Qv_tg','Qfm_tg','SWE_tg','SND_tg',...
+    'WR_SP_tg','dw_SNO_tg','ros_tg','In_SWE_tg','SP_wc_tg','ICE_tg',...
+    'ICE_D_tg','WR_IP_tg','NIce_tg','IP_wc_tg','T_H_tg','T_L_tg',...
+    'EIn_H_tg','EIn_L_tg','EG_tg','ESN_tg','EWAT_tg','EICE_tg',...
+    'Dr_L_tg','Dr_H_tg','EIn_urb_tg','EIn_rock_tg','In_tg','Inveg_tg',...
+    'WAT_tg','FROCK_tg','f_tg','WIS_tg','Rd_tg','Rh_tg','Lk_tg',...
+    'Lk_wat_tg','Lk_rock_tg','OF_tg','OS_tg','ZWT_tg','Fract_sat_tg',...
+    'Qlat_in_tg','Qlat_out_tg','q_runon_tg','Q_channel_tg','V_tg',...
+    'O_tg','Q_exit','Qsub_exit','Swe_exit','r_soil_tg','alp_soil_tg',...
+    'ra_tg','Tdp_tg','er_tg','TsVEG_tg','Ts_under_tg','Tdpsnow_tg',...
+    'DQ_S_tg','DT_S_tg','dQ_S_tg','Imelt_tg','Smelt_tg','Tice_tg',...
+    'Vice_tg','CK1_tg','t','CKt','Csno10_tg','Csno50_tg','Csno100_tg',...
+    'LAI_tg','NDVI_tg'};
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if t==2
-    tit{1}=strcat('OUTPUT_',TITLE_SAVE,'_AVG.dat');
+    tit{1}=strcat(outlocation, '/OUTPUT_',TITLE_SAVE,'_AVG.dat');
     fid(1)=fopen(tit{1},'a');
+
+    % Add labels to column list
+    for ii = 1:length(vars_avg)-1
+        fprintf(fid(1),'%s\t',vars_avg{ii});
+    end 
+    fprintf(fid(1),'%s\t\n',vars_avg{length(vars_avg)});
 end
 fprintf(fid(1),'%g\t',Pr_tg); %1
 fprintf(fid(1),'%g\t',Ta_tg); %2
@@ -301,7 +333,13 @@ fprintf(fid(1),'%g\t',Vice_tg);%%89
 %%%
 fprintf(fid(1),'%g\t',CK1_tg);%%90
 fprintf(fid(1),'%g\t',t);%%91
-fprintf(fid(1),'%g\t\n',CKt);%%92
+fprintf(fid(1),'%g\t',CKt);%%92
+fprintf(fid(1),'%g\t',Csno10_tg);%%93
+fprintf(fid(1),'%g\t',Csno50_tg);%%94
+fprintf(fid(1),'%g\t',Csno100_tg);%%95
+%%%
+fprintf(fid(1),'%g\t',LAI_tg);%%96
+fprintf(fid(1),'%g\t\n',NDVI_tg);%%97
 %%%%
 if t==N_time_step
     fclose(fid(1));
@@ -315,18 +353,18 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 std_Pr_tg = std(Pr_S(Kinde)); %%% [mm]
-std_Ta_tg = std(Ta_S(Kinde)); %%% [캜]
+std_Ta_tg = std(Ta_S(Kinde)); %%% [째C]
 std_Ws_tg = std(Ws_S(Kinde)); %%% [m/s]
-std_Ds_tg = std(Ds_S(Kinde)); %%% [캜]
+std_Ds_tg = std(Ds_S(Kinde)); %%% [째C]
 std_ea_tg = std(ea_S(Kinde)); %%% [Pa]
 std_N_tg = std(N_S(Kinde)); %%% [-]
 std_Pre_tg = std(Pre_S(Kinde)); %%% [mbar]
-std_Tdew_tg = std(Tdew_S(Kinde)); %%% [캜]
+std_Tdew_tg = std(Tdew_S(Kinde)); %%% [째C]
 std_Rsw_tg = std(Rsw_space(Kinde)); %%% [W/m^2]
 std_PAR_tg= std(PAR_space(Kinde));%% [W/m^2]
 std_Ca_tg= std(Ca_S(Kinde));%% [W/m^2]
-std_Ts_tg  =  std(Ts(Kinde));%% [캜]
-std_Tdamp_tg  = std(Tdamp(Kinde));%% [캜]
+std_Ts_tg  =  std(Ts(Kinde));%% [째C]
+std_Tdamp_tg  = std(Tdamp(Kinde));%% [째C]
 std_Pr_sno_tg  =  std(Pr_sno(Kinde));%% [mm]
 std_Pr_liq_tg = std(Pr_liq(Kinde)); %%[mm]
 %%%%
@@ -391,17 +429,17 @@ std_Q_channel_tg = std(Q_channel(Kinde)); %% [mm]
 std_O_tg =std(O_space(Kinde)); %%
 std_V_tg =std(V_space(Kinde)); %%
 std_Tdp_tg = std(Tdp_space(Kinde));
-std_TsVEG_tg  = std(TsVEG(Kinde));%% [캜]
+std_TsVEG_tg  = std(TsVEG(Kinde));%% [째C]
 %%%%%%%%
 std_er_tg =  std(er(Kinde)); %%  % [kg/s m^2]
-std_r_soil_tg  =  std(r_soil(Kinde));%% [캜]
+std_r_soil_tg  =  std(r_soil(Kinde));%% [째C]
 std_alp_soil_tg = std(alp_soil(Kinde)); %%[]
 std_ra_tg  =  std(ra(Kinde));%% [m/s]
 %%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if t==2
-    tit4{1}=strcat('OUTPUT_',TITLE_SAVE,'_STD.dat');
+    tit4{1}=strcat(outlocation,'OUTPUT_',TITLE_SAVE,'_STD.dat');
     fid4(1)=fopen(tit4{1},'a');
 end
 %%%%%%%%%
@@ -594,7 +632,7 @@ if OPT_VAR_SM_ON == 1
     %%%%%%%%%%%%%%%%
     
     if t==2
-        tit8{1}=strcat('OUTPUT_',TITLE_SAVE,'_VAR_SM.dat');
+        tit8{1}=strcat(outlocation,'OUTPUT_',TITLE_SAVE,'_VAR_SM.dat');
         fid8(1)=fopen(tit8{1},'a');
     end
     fprintf(fid8(1),'%g\t',dOspacep2dt); %1
@@ -718,7 +756,7 @@ if t==2
     for ijki=1:cc_max
         for ievc=1:length(EVcode)
             if Ccrown_OUT(ievc,ijki)>0
-                tit2{ievc,ijki}=strcat('OUTPUT_',TITLE_SAVE,'_AVG_PFT_',num2str(ijki),'_code_',num2str(EVcode(ievc)),'.dat');
+                tit2{ievc,ijki}=strcat(outlocation,'OUTPUT_',TITLE_SAVE,'_AVG_PFT_',num2str(ijki),'_code_',num2str(EVcode(ievc)),'.dat');
                 fid2(ievc,ijki)=fopen(tit2{ievc,ijki},'a');
             end
         end
@@ -782,7 +820,7 @@ if t==2
     for ijki=1:cc_max
         for ievc=1:length(EVcode)
             if Ccrown_OUT(ievc,ijki)>0
-                tit3{ievc,ijki}=strcat('OUTPUT_',TITLE_SAVE,'_STD_PFT_',num2str(ijki),'_code_',num2str(EVcode(ievc)),'.dat');
+                tit3{ievc,ijki}=strcat(outlocation,'OUTPUT_',TITLE_SAVE,'_STD_PFT_',num2str(ijki),'_code_',num2str(EVcode(ievc)),'.dat');
                 fid3(ievc,ijki)=fopen(tit3{ievc,ijki},'a');
             end
         end
@@ -1133,7 +1171,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 if  length(intersect(t,tstore))==1 ||  t==N_time_step
-    Title_save = strcat('OUTPUT_',TITLE_SAVE,'_SPATIAL_',num2str(t));
+    Title_save = strcat(outlocation,'OUTPUT_',TITLE_SAVE,'_SPATIAL_',num2str(t));
     save(Title_save,'DTM','cellsize','xllcorner','yllcorner','x_cell','y_cell','m_cell','n_cell','Pr_spatial',...
         'Ta_spatial','Ws_spatial','Ds_spatial','ea_spatial','N_spatial','Pre_spatial','Tdew_spatial',...
         'Rsw_spatial','PAR_spatial','Ca_spatial','Ts_spatial','Tdamp_spatial','Csno_spatial','Pr_sno_spatial',...
@@ -1166,18 +1204,33 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%% TRACKED PIXELS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Variable names for pixel time series
+vars_pix = {'Pr_S','Ta_S','Ws_S','Ds_S','ea_S','N_S','Pre_S','Tdew_S',...
+    'Rsw_space','PAR_space','Ca_S','Ts','Tdamp','Csno','Cice','Csnow',...
+    'Cicew','Pr_sno','Pr_liq','Rn','H','G','Gfin','QE','Qv','Qfm',...
+    'SWE','SND','WR_SP','U_SWE','NIn_SWE','dw_SNO','ros','In_SWE',...
+    'SP_wc','ICE','ICE_D','WR_IP','IP_wc','NIce','EG','ESN','ESN_In',...
+    'EWAT','EICE','EIn_urb','EIn_rock','SE_rock','SE_urb','In_urb',...
+    'In_rock','WAT','FROCK','f','WIS','Rd','Rh','Lk','Lk_wat','Lk_rock',...
+    'OF','OS','ZWT','q_runon','Q_channel','r_soil','alp_soil','ra','er',...
+    'DQ_S','DT_S','dQ_S','QpointH','QpointC','UpointH','UpointC','CK'};
+%
 for ipo=1:npoint
     ij = sub2ind(size(DTM),Yout(ipo),Xout(ipo));
     if t==2
-        tit5{1,ipo}=strcat('OUTPUT_',TITLE_SAVE,'_PIXEL_',num2str(ij),'.dat');
+        tit5{1,ipo}=strcat(outlocation,'OUTPUT_',TITLE_SAVE,'_PIXEL_',num2str(ij),'_',poiNames{ipo},'.dat');
         fid5(1,ipo)=fopen(tit5{1,ipo},'a');
+
+        % Add labels to column list
+        for ii = 1:length(vars_pix)-1
+           fprintf(fid5(1,ipo),'%s\t',vars_pix{ii});
+        end 
+        fprintf(fid5(1,ipo),'%s\t\n',vars_pix{length(vars_pix)});
     end
     fprintf(fid5(1,ipo),'%g\t',Pr_S(ij));%1
     fprintf(fid5(1,ipo),'%g\t',Ta_S(ij));%2
@@ -1275,7 +1328,7 @@ for ipo=1:npoint
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%
     if t==2
-        tit6{ipo}=strcat('OUTPUT_',TITLE_SAVE,'_PIXEL_SOIL_',num2str(ij),'.dat');
+        tit6{ipo}=strcat(outlocation,'OUTPUT_',TITLE_SAVE,'_PIXEL_SOIL_',num2str(ij),'_',poiNames{ipo},'.dat');
         fid6(ipo)=fopen(tit6{ipo},'a');
     end
     for kjk = 1:ms_max
@@ -1295,7 +1348,7 @@ for ipo=1:npoint
     %%%%%%%%%
     if t==2
         for ijki=1:cc_max
-            tit7{1+ijki,ipo}=strcat('OUTPUT_',TITLE_SAVE,'_PIXEL_',num2str(ij),'_PFT_',num2str(ijki),'.dat');
+            tit7{1+ijki,ipo}=strcat(outlocation,'OUTPUT_',TITLE_SAVE,'_PIXEL_',num2str(ij),'_',poiNames{ipo},'_PFT_',num2str(ijki),'.dat');
             fid7(1+ijki,ipo)=fopen(tit7{1+ijki,ipo},'a');
         end
     end
@@ -1395,7 +1448,7 @@ end
 if not(isempty(RES_ID_List))
     for ire=1:length(RES_ID_List)
         if t==2
-            tit8{1,ire}=strcat('OUTPUT_',TITLE_SAVE,'_RESERVOIRS_',num2str(RES_ID_List(ire)),'.dat');
+            tit8{1,ire}=strcat(outlocation,'OUTPUT_',TITLE_SAVE,'_RESERVOIRS_',num2str(RES_ID_List(ire)),'.dat');
             fid8(1,ire)=fopen(tit8{1,ire},'a');
         end
         fprintf(fid8(1,ire),'%g\t',Q_out_Res(ire));%1 %% [mm/h] 

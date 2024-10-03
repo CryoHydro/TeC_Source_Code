@@ -116,10 +116,10 @@ if not(exist('Aice','var'))
     SnowIce_Param.TminS=-0.8;
     SnowIce_Param.TmaxS=2.8;
     SnowIce_Param.WatFreez_Th=-8;
-    SnowIce_Param.dz_ice=0.54;
+    SnowIce_Param.dz_ice=0.45;
     SnowIce_Param.Th_Pr_sno=10;
     SnowIce_Param.ros_max1=550;
-    SnowIce_Param.ros_max2=260;
+    SnowIce_Param.ros_max2=300;
     SnowIce_Param.Ice_wc_sp=0.01;
     SnowIce_Param.ros_Ice_thr=500;
     SnowIce_Param.Aice=0.35;
@@ -138,7 +138,7 @@ else
 end
 
 %%%%%%%%% Debris-Cover properties
-if not(exist('dbThick','var')) || dbThick == 0
+if not(exist('dbThick','var')) || dbThick == 0 || isnan(dbThick)
     Deb_Par.alb= 0.13 ;
     Deb_Par.e_sur =  0.94;
     Deb_Par.lan = 0.94;

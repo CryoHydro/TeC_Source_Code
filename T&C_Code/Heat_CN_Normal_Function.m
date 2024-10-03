@@ -2,18 +2,17 @@
 %   Subfunction  Debris Thermal Mod %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [T] = Heat_CN_Normal_Function(Ttm1,dts,lanS,cv,Zs,Tup,Tdown,Gn,G0,OPZ)
-
-Ttm1=flip(Ttm1(:)); lanS=flip(lanS(:));  cv=flip(cv(:));
+Ttm1=flip(Ttm1); lanS=flip(lanS);  cv=flip(cv);
 %%%%%%%%%%%%%%%%%%
-% Ttm1=reshape(Ttm1,length(Ttm1),1);
-% lanS=reshape(lanS,length(lanS),1);
-% cv=reshape(cv,length(cv),1);
+Ttm1=reshape(Ttm1,length(Ttm1),1);
+lanS=reshape(lanS,length(lanS),1);
+cv=reshape(cv,length(cv),1);
 
 Zs=sort(-Zs');
 nz=length(Zs)-1; %% number of layers
 nn = nz + 2; %%% number of nodes for temperature
-dz= diff(Zs*0.001); %%%% [m]  Thickness of the Layers
-% dz=dz*0.001; %% [m]
+dz= diff(Zs); %%%% [mm]  Thickness of the Layers
+dz=dz*0.001; %% [m]
 
 %Dz=[dz(1)*0.5, 0.5*(dz(1:nz-1)+dz(2:nz))];
 DzC = [dz(1)*0.5 ; 0.5*(dz(1:nz-1)+dz(2:nz)) ; dz(end)*0.5];
@@ -23,11 +22,9 @@ RF = 0; %% W/m2 Absorbed radiation or additional energy in each layer of soil
 
 %%% Harmonic Mean of lanS
 %lanS_half(2:nz)= (dz(1:nz-1) + dz(2:nz))./(dz(1:nz-1)./(lanS(1:nz-1)) + dz(2:nz)./lanS(2:nz));
-lanS_half = zeros(nz+1, 1);
 lanS_half(2:nz)= 0.5*(lanS(1:nz-1) + lanS(2:nz));
-lanS_half(1)=lanS(1); 
-lanS_half(nz+1)=lanS(nz);
-lanS_half=lanS_half(:);%reshape(lanS_half,length(lanS_half),1);
+lanS_half(1)=lanS(1); lanS_half(nz+1)=lanS(nz);
+lanS_half=reshape(lanS_half,length(lanS_half),1);
 
 % --- Coefficients of the tridiagonal system
 alp = 0.5; %% Tridiagonal system of Equation
@@ -98,16 +95,10 @@ end
 % S = sparse(i,j,s,m,n,nzmax) uses vectors i, j, and s to
 %generate an m-by-n sparse matrix such that S(i(k),j(k)) = s(k), with
 %space allocated for nzmax nonzeros.
-% maindiag=sparse(1:nn,1:nn,b,nn,nn);
-% upper=sparse(1:(nn-1),2:nn,c(1:nn-1),nn,nn);
-% lower=sparse(2:nn,1:(nn-1),a(2:nn),nn,nn);
-% A=maindiag+upper+lower;
-maindiag = diag(b);
-upper = diag(c(1:nn-1),1);
-lower = diag(a(2:nn),-1);
-A = maindiag + upper + lower;
-
-% T=A\d; %%[°C]
-T = A\d;
+maindiag=sparse(1:nn,1:nn,b,nn,nn);
+upper=sparse(1:(nn-1),2:nn,c(1:nn-1),nn,nn);
+lower=sparse(2:nn,1:(nn-1),a(2:nn),nn,nn);
+A=maindiag+upper+lower;
+T=A\d; %%[°C]
 T=flip(T);
 return
