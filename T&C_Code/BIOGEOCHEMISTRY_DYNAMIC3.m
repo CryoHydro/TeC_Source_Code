@@ -141,7 +141,7 @@ B(32)=B(32)-NO3_Uptake;%%   Nitrogen Nitrate NO3-
 B(43)=B(43)-P_Uptake;%  phosphorus Mineral
 B(52)=B(52)-K_Uptake;%% Potassium  Mineral  solution
 B(B<=0)=1e-15;
-%%%% Decay Constant on a 40°C basis (Kirschbaum 2002)
+%%%% Decay Constant on a 40ï¿½C basis (Kirschbaum 2002)
 k_met_sur = BiogeoPar.k_met_sur; %%[1/day]
 k_str_sur = BiogeoPar.k_str_sur; %% %[1/day]
 k_met_ssr = BiogeoPar.k_met_ssr;
@@ -310,7 +310,7 @@ pemem = knp*pemem; %
 %pemb = rem*B(16)./(mrb*B(18)); pemb(pemb<0.0031)=0.0031; pemb(pemb>0.031)=0.031;
 %pepf = rep*B(15)./(mrf*B(19)); pepf(pepf<0.0031)=0.0031; pepf(pepf>0.031)=0.031;
 %pemf = rem*B(17)./(mrf*B(19)); pemf(pemf<0.0031)=0.0031; pemf(pemf>0.031)=0.031;
-%%%%%%%% Litter Decoomposition on a 40°C basis
+%%%%%%%% Litter Decoomposition on a 40ï¿½C basis
 Tref4=BiogeoPar.T4;
 fT2 = exp(3.36*(Ts-Tref4)/(Ts+31.79)); %% Kirschbaum 1995 2000 2002
 fT1 = exp(3.36*(Ta-Tref4)/(Ta+31.79)); %% Kirschbaum 1995 2000 2002
@@ -386,7 +386,7 @@ Ecf =BiogeoPar.Ecf;
 %%%%%%%%%%%%%%%%%%%%
 %%% Temperature effects on CUE
 Tref=BiogeoPar.T2;
-mtem = BiogeoPar.mtem; %%[°C] [0 - 0.016] Allison et al 2010; Li et al 2014
+mtem = BiogeoPar.mtem; %%[ï¿½C] [0 - 0.016] Allison et al 2010; Li et al 2014
 rr_met_sur = 1 - min(CUEmax,(CUE_met_sur + mtem*(Ts-Tref)));
 rr_str_sur= 1 - min(CUEmax,(CUE_str_sur + mtem*(Ts-Tref)));
 rr_wod_sur=1 - min(CUEmax,(CUE_wod_sur + mtem*(Ts-Tref)));

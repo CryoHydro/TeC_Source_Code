@@ -26,7 +26,8 @@ function[snow_alb,tau_sno,e_sno]=Albedo_Snow_Properties(dt,SWE,h_S,Ts,Ta,SWEtm1,
 %%% Cice = glacier or not
 %%% Pr_sno = snowfall
 Pr_sno_day= Pr_sno_day+Pr_sno*dt/3600; %% [mm] 
-Ta_day= [reshape(Ta_day(2:length(Ta_day)),1,length(Ta_day)-1), Ta]; %%[°C]
+if size(Ta_day,1)==1; Ta_day=Ta_day';end
+%Ta_day = [Ta_day(2:end); Ta]; %%[ï¿½C]
 %%% OUTPUT
 % tau_sno [] %% Relative Age of snow
 %snow_alb.dir_vis
@@ -38,6 +39,7 @@ Ta_day= [reshape(Ta_day(2:length(Ta_day)),1,length(Ta_day)-1), Ta]; %%[°C]
 %%%%%%%%%%%%%%%%%%%%
 e_sno = 0.97; %%% Snow emissivity
 %%%%%%%%%%
+
 %Choose method based on if glacier or not
 % if Cice==1
 %     ANS=4; %Use snow on glacier albedo
@@ -46,6 +48,7 @@ e_sno = 0.97; %%% Snow emissivity
 % end
 ANS=5;
 %%%%%%%
+
 switch ANS
     case 1
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -187,9 +190,8 @@ switch ANS
         if Asno>0.85
             Asno=0.85;
         elseif isnan(Asno)
-            Asno=a_u; %So if=NaN (only occurs under conditions of Csno=1, SWE=0 and ATa=0, so its cold but the snow has melted, therefore assign the underlying albedo)
-        end 
-        
+            Asno=a_u; %So if=NaN (only occurs under conditions of Csno=1, SWE=0 and ATa=0, so its cold but the snow has melted, therefore give the underlying albedo)
+        end
         snow_alb.dir_vis = Asno;
         snow_alb.dir_nir = Asno;
         snow_alb.dif_vis = Asno;
@@ -200,10 +202,10 @@ switch ANS
         %   Snow albedo function as described in Ding et al. (2017)
         
         %%%%%
-        Asnotm1= tau_snotm1;
+        Asnotm1= tau_snotm1; 
         
         Amax = 0.85;
-        Amin = 0.5;
+        Amin = 0.4;
         if Cice == 1
             if Cdeb == 1
                 Amin =  Deb_Par.alb;
@@ -215,7 +217,7 @@ switch ANS
         Asnotm1(Asnotm1<Amin)=Amin;
         Asnotm1(Asnotm1>Amax)=Amax;
         %%%%%%%%%%%%%
-        if Pr_sno > 0.0
+        if Pr_sno > 0 %possibility to use a threshold with Pr_sno_day, as in Brock method, if to many refreshings occur
             %%%% Fresh snow falling 
             row = 1000; % water density [kg/m^3]
             Ta_day=mean(Ta_day); 

@@ -299,9 +299,9 @@ fprintf(fid(1),'%g\t',Smelt_tg);%%87
 fprintf(fid(1),'%g\t',Tice_tg);%%88
 fprintf(fid(1),'%g\t',Vice_tg);%%89
 %%%
-fprintf(fid(1),'%g\t',CK1_tg);%%90
-fprintf(fid(1),'%g\t',t);%%91
-fprintf(fid(1),'%g\t\n',CKt);%%92
+fprintf(fid(1),'%g\t',CK1_tg);%%89
+fprintf(fid(1),'%g\t',t);%%90
+fprintf(fid(1),'%g\t\n',CKt);%%91
 %%%%
 if t==N_time_step
     fclose(fid(1));
@@ -1075,7 +1075,7 @@ else
     Qlat_in_spatial=  ((toutp-2)*Qlat_in_spatial +  Qi_in_space)/(toutp-1) ;
     Qlat_out_spatial =  ((toutp-2)*Qlat_out_spatial +  Qi_out_space)/(toutp-1) ;
     q_runon_spatial = ((toutp-2)*q_runon_spatial +  q_runon)/(toutp-1) ;
-    Q_channel_spatial = ((toutp-2)*Q_channel_spatial +  Q_channel)/(toutp-1) ; 
+    Q_channel_spatial = ((toutp-2)*Q_channel_spatial +  Q_channel)/(toutp-1) ;
     %%%%%%%%%
     V_spatial= ((toutp-2)*V_spatial + V_space)/(toutp-1) ;
     Vice_spatial=((toutp-2)*Vice_spatial + Vice_space)/(toutp-1) ;
@@ -1165,28 +1165,9 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% if t==2
-%     tou_ch_add=2;
-% else
-%     tou_ch_add=tou_ch_add+1;
-% end
-% %%%
-% if tou_ch_add==2
-%     Q_ch_added_spatial = Q_ch_added;
-% else
-%     Q_ch_added_spatial = Q_ch_added_spatial + Q_ch_added;
-% end
-% if  mod(t,24) == 0
-%     %%%%%%%%%%%
-%     Title_save = strcat('OUTPUT_',TITLE_SAVE,'_Q_CH_ADD_',num2str(t));
-%     save(Title_save,'Q_ch_added_spatial');
-%     %%%%%%%%%%
-%     tou_ch_add = 1;
-%     %%%%%%%%%%
-% end
 
 
-%%%%
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%% TRACKED PIXELS
