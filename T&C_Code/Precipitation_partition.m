@@ -48,7 +48,8 @@ switch OPT_Pr_Part
         cp=1005 + ((Ta +23.15).^2)/3364; %% specific heat air  [J/kg K]
         gam=cp.*100.*Pre./(0.622*Laten); %% [Pa/C] psycrometric constant
         del=(4098*esat)./((237.3+Ta).^2); %% Pa/C
-        Twb = Ta - esat*(1-U)./(0.000643*Pre + 6.1078.*del);    % [C] %% Wet bulb temperature (following Ding et al. 2014)
+        %Twb = Ta - esat*(1-U)./(0.000643*Pre + 6.1078.*del);    % [C] %% Wet bulb temperature (following Ding et al. 2014)
+        Twb = Ta - ( esat - ea )./( gam + del);    % [C] %% Wet bulb temperature
 
         %%%%%
         %%%%%%
