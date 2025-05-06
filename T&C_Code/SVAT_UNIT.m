@@ -107,6 +107,16 @@ else
     Cicew = 0;
     Csnow = 0;
 end
+
+%%%%%%%%%%%%%%%%% 
+%%% To prevent numerical instability
+if  abs(Tstm0-Ta)>25
+    Tstm0 = Tstm1;
+end
+if Tstm0 > 85 || Tstm0 < -100%  maximum initial point for surface temperature 85°C (Aminzadeh et al. 2023)
+    Tstm0 = Ta-0.1;
+end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 [In_max_SWE,In_max_L,In_max_H]=Maximum_Interception(Ccrown,LAI_L,LAI_H,(SAI_H+LAIdead_H),(SAI_L+LAIdead_L),...
     Ta,Sp_SN_In,Sp_LAI_L_In,Sp_LAI_H_In);
@@ -311,7 +321,8 @@ if Csno == 1
         TsV = 0;
     end
     %%%%%
-    [Ts]=fzero(@Surface_Temperature_Snow,Tstm0,Opt_ST,dt,Ta,ea,Latm,SvF,Pre,...
+    for rr=1:2
+      [Ts,~,exitflag]=fzero(@Surface_Temperature_Snow,Tstm0,Opt_ST,dt,Ta,ea,Latm,SvF,Pre,...
         Csno,Crock,Curb,Cbare,Ccrown,Cwat,Cice,Cfol_H,...
         hc_H,hc_L,SNDtm1,ydepth,ICE_Dtm1,Cdeb,LAI_H,LAI_L,(SAI_H+LAIdead_H),(SAI_L+LAIdead_L),...
         RabsbSun_vegH,RabsbShd_vegH,Rabsb_soiH,...
@@ -324,6 +335,15 @@ if Csno == 1
         Tstm1,G,Tdpsnowtm1,lan_sno,...
         zatm,disp_h,zom,zoh,zom_under,disp_h_H,zom_H,disp_h_L,zom_L,Ws,In_Littertm1,alp_litter,Pr_sno_day,Th_Pr_sno,ros_max1,ros_max2,...
         Tdew,t_slstm1,SWEtm1,SNDtm1,rostm1,SP_wctm1,In_SWEtm1,fpr,Vavail,Vavail_plant_H,Vavail_plant_L,WATtm1,ICEtm1,OPT_VegSnow,min_SPD,TsV,hSTL);
+
+       if exitflag>0
+          break
+       else
+          if rr==1
+              Tstm0=Ta-0.1;
+          end
+       end
+    end 
     %%%% %%%%%%%%%%%%%%%%%%%
     T2_flag=0; Ts_under=Tstm1_under; %% Case without 2 temperatures
 else
@@ -332,7 +352,8 @@ else
         if Cdeb == 1
             %%% debris covered glacier
             ms_deb = length(Tdebtm1);
-            [Ts]=fzero(@Surface_Temperature_Debris,Tstm0,Opt_ST,dt,Ta,ea,Latm,SvF,Pre,...
+            for rr=1:2
+              [Ts,~,exitflag]=fzero(@Surface_Temperature_Debris,Tstm0,Opt_ST,dt,Ta,ea,Latm,SvF,Pre,...
                 Csno,Crock,Curb,Cbare,Ccrown,Cwat,Cice,...
                 hc_H,hc_L,SNDtm1,ydepth,ICE_Dtm1,Cdeb,Zs_deb,LAI_H,LAI_L,(SAI_H+LAIdead_H),(SAI_L+LAIdead_L),...
                 RabsbSun_vegH,RabsbShd_vegH,Rabsb_soiH,...
@@ -345,7 +366,15 @@ else
                 Tdebtm1,Ticetm1,Deb_Par,ms_deb,...
                 zatm,disp_h,zom,zoh,zom_under,disp_h_H,zom_H,disp_h_L,zom_L,Ws,In_Littertm1,alp_litter,...
                 Vavail,Vavail_plant_H,Vavail_plant_L,WATtm1,ICEtm1);
-        else
+             if exitflag>0
+                 break
+             else
+                 if rr==1
+                   Tstm0=Ta-0.1;
+                  end
+             end
+           end 
+        else            
             Gice =  2.29*(Tstm1-Tdptm1(1))/(ICE_Dtm1+0.001); %%% [W m-2]
             Gice_max =2093*(ICEtm1)*(Tstm1-Tdptm1(1))/dt; %%  Maximum Flux [W /m^2 ]
             Gice= sign(Gice)*min([abs(Gice),abs(Gice_max)]);
