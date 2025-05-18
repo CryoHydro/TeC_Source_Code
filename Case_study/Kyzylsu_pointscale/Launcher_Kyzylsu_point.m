@@ -197,7 +197,7 @@ Ameas = zeros(NN,1);
 N=forcing.LWIN; Latm=forcing.LWIN;
 
 % Precipitation
-Pr=forcing.PP;Pr(isnan(Pr))=0; Pr(Pr<0.001)=0;
+Pr=forcing.PP;Pr(isnan(Pr))=0; Pr(Pr<0.01)=0;
 
 if Pmod >0
   Pr = Pr.*Pmod_S(ij);
@@ -219,7 +219,7 @@ if (GLH(ij)>0) && (DEB_MAP(ij) < 10) % glacier, but without debris
 end 
 
 %%% Wind Speed
-Ws=forcing.FF; Ws(Ws < 0.01) = 0.01;
+Ws=forcing.FF; Ws(Ws < 0.05) = 0.05;
 %%% Relative humidity
 if max(forcing.RH)<= 1
     U=forcing.RH;
