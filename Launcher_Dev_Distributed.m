@@ -17,9 +17,7 @@
 %UPDATE PARAMS WITH SIMONES
 %Initial albedo map
 %rho_g
-%bare ice albedo or albedo versus elevation relationship
 %Soil paramters issues Max mentioned
-%instrument heights
 %CHECK times as starts Date-1 but saves against Date?
 
 %% CLEAR ALL
@@ -28,23 +26,83 @@ clc; clear;
 % delete(gcp('nocreate'))
 
 %=========================================================================
-%% INITIAL CONDITIONS
+%% SITE SETUP
 %==========================================================================
 
-% Names of catchment and clusters
-%--------------------------------------------------------------------------
-IniCond.SITE = 'Shallap';
-IniCond.FORCING = "SH";
-IniCond.DeltaGMT= -5; % For Peru time
+site_num_list = [1 2]; %Please number sequentially
+site_name_list = {'Shallap' 'Artesonraju'};
+num_sites = size(site_num_list,2);
+site_num = 1; %Choose site to run, this then selects the correct site directories
+site_name = site_name_list{site_num};
 
-% Name of the folder to save results
-%--------------------------------------------------------------------------
-IniCond.run_folder = 'Run_33';
+%===================================================
+%% Load config info
+%==================================================
+
+% Sub-path for Config file
+Directories.config = [site_name '/Parameters/Site_config_TC.xlsx'];
+
+CONFIG = readcell(Directories.config);
+CON_vals_id = find(CONFIG(1,:)=="Value");
+CON_label_id = find(CONFIG(1,:)=="Variable");
+CONFIG_vals = cell2struct(CONFIG(2:end,CON_vals_id),CONFIG(2:end,CON_label_id)'); %Now a structure of the config info
+
+IniCond.DeltaGMT = CONFIG_vals.DeltaGMT; %Define change from GMT
+IniCond.run_folder = CONFIG_vals.Run_Folder; %Define folder to save outputs
+
+%%======================================================================
+% Model structure choices
+%========================================================================
+
+OPT_Forcing = CONFIG_vals.OPT_Forcing; %Choose type of forcing, 1= from AWS which is distributed
+OPT_Veg_Param = CONFIG_vals.OPT_Veg_Param; %Choose if vegetation parameters (for Ccrown, Cwat, Crock, Curb, Cbare) are one value per landcover type (1), or gridded and variable per landcover (2). 
+%For 1 change the values in VPAR_T directly, for 2 provide the grids in the
+%dtm_file. Note for 2 you still need the table to read the Veg_type names
+%but the values are not used. 
+
+%% DIRECTORIES - ALL RELATIVE - NO NEED TO UPDATE 
+%==========================================================================
+% All paths are here
+%==========================================================================
+
+% Sub-path for outputs
+Directories.save = ['Outputs/Distributed/' IniCond.run_folder '/']; %Do we make this site specific?
+Directories.restart = Directories.save;
+
+% Sub-path for forcings
+Directories.forc = [site_name '/Forcing']; 
+if OPT_Forcing == 1
+Directories.forc_meteo = [Directories.forc '/' CONFIG_vals.forc_meteo_file]; meteo_name = CONFIG_vals.forc_meteo_name;
+ta_lapse_file = CONFIG_vals.ta_lapse_file;  ta_lapse_name = CONFIG_vals.ta_lapse_name; %These are lapse rates per hour and month, in a table with a column with hour, a column with month, and a column with lapse rates (positive values)
+pr_lapse_file = CONFIG_vals.pr_lapse_file;  pr_lapse_name = CONFIG_vals.pr_lapse_name; %This is a structure Pr_lapse(m).month where each month has a linear model
+Meteo_el = CONFIG_vals.Meteo_el; %Elevation of station, used if OPT_forcing = 1
+end
+
+% Parameters
+Directories.Vegpar = [site_name '/Parameters/Parameters_TC.xlsx']; 
+Directories.Optpar = [site_name '/Parameters/Options_and_NoVegParams.xlsx'];
+Directories.VPAR = [site_name,'/Parameters/VPAR_T.xlsx'];
+
+% Preprocessing information
+Directories.PreProc = [site_name '/Preprocessing/OUTPUTS/' CONFIG_vals.PreProc_folder '/']; 
+dtm_file = CONFIG_vals.dtm_file;
+
+% Sub-path points of interest for discharge and multipoints
+Directories.POIs = [site_name '/Preprocessing/OUTPUTS/']; %POI_dtm_Shallap_50m.txt
+Directories.Multi = ['Multipoint/OUTPUTS/' site_name '_MultiPoints.txt'];
+
+% Dependencies
+addpath(genpath('Functions')); % Where are distributed model set-up files (needed ? yes to load dtm)
+addpath(genpath([site_name '/Preprocessing/OUTPUTS'])); % Where are distributed model set-up files (needed ? yes to load dtm)
+%addpath(genpath([Directories.model,'/T_and_C/TC_setups/' site_name '/RUNS/INPUTS'])); % Where is located the meteorological forcing and Shading matrix 
+addpath(genpath([site_name '/Forcing'])); % Add path to Ca_Data
+addpath(genpath('T&C_Code')); %T&C source code 
+
 
 % Modelling period and time
 %--------------------------------------------------------------------------
-dateRun.start = "01-Nov-2014 00:00:00"; % Starting point of the simulation - start on the first of the month
-dateRun.end = "31-Dec-2014 23:00:00"; % Last timestep of the simulation  %31-Oct-2015 23:00:00 %"31-Oct-2017 03:00:00" 31-Oct-2016 23:00:00"
+dateRun.start = CONFIG_vals.Run_StartDate;  % Starting point of the simulation - start on the first of the month
+dateRun.end = CONFIG_vals.Run_EndDate; % Last timestep of the simulation 
 
 x1=datetime(dateRun.start); x2=datetime(dateRun.end);
 Date = x1:hours(1):x2;
@@ -58,69 +116,11 @@ dth=1; %% [h]
 Datam(:,1) = YE; Datam(:,2)= MO; Datam(:,3)= DA; Datam(:,4)= HO;
 clear YE MO DA HO MI SE
 
-% Folder with forcings
-%--------------------------------------------------------------------------
-forc_in = 'Shallap';
-
-% Folder with Terrain inputs
-%--------------------------------------------------------------------------
-terrain_in = 'Shallap';
-
 % Restart option
 %--------------------------------------------------------------------------
-restart.id = 0; % Set to 1 to continue an un-completed T&C run
-restart.date = '30_Jun_2001'; %Define iter to restart
-restart.run = 'Run_45'; 
-
-%%======================================================================
-% Model structure choices
-%========================================================================
-
-OPT_Forcing = 1; %Choose type of forcing, 1= from AWS which is distributed
-OPT_Veg_Param = 2; %Choose if vegetation parameters (for Ccrown, Cwat, Crock, Curb, Cbare) are one value per landcover type (1), or gridded and variable per landcover (2). 
-%For 1 change the values in VPAR_T directly, for 2 provide the grids in the dtm_file
-
-
-%% DIRECTORIES
-%==========================================================================
-% All paths are here
-%==========================================================================
-
-% Main roots
-%Directories.root = '/nfs/scistore18/pelligrp/cfyffe/Dropbox/EPIC/Modelling'; %HPC
-Directories.root = 'B:/group/pelligrp/Project_folders/MountainWater/Tethys_Chloris/Workflow_dev/Scripts/Cat/TeC_Source_Code'; %Think
-
-% Sub-path for the model
-%Directories.model = [Directories.root '/T_and_C'];
-
-% Sub-path for outputs
-Directories.save = [Directories.root '/Outputs/Distributed/' IniCond.run_folder '/']; %Do we make this site specific?
-Directories.restart = Directories.save;
-
-% Sub-path for forcings
-Directories.forc = [Directories.root '/' forc_in '/Forcing']; 
-Directories.forc_meteo = [Directories.forc '/SM_Data_cl_and_fl_20260202.mat']; meteo_name = 'SM_fl4_hourly';
-ta_lapse_file = "SH_hm_Ta_lapse.mat"; ta_lapse_name = 'SH_hm_lapse'; %These are lapse rates per hour and month, in a table with a column with hour, a column with month, and a column with lapse rates (positive values)
-pr_lapse_file = 'SH_Pr_ratio_v_el_fit.mat'; pr_lapse_name = 'C406_fit_out_r'; %This is a structure Pr_lapse(m).month where each month has a linear model
-Meteo_el = 4767; %Elevation of station, used if OPT_forcing = 1
-
-% Parameters
-Directories.Vegpar = [Directories.root,'/' IniCond.SITE '/Parameters/Parameters_TC.xlsx']; 
-Directories.Optpar = [Directories.root '/' IniCond.SITE '/Parameters/Options_and_NoVegParams.xlsx'];
-
-% Preprocessing information
-Directories.PreProc = [Directories.root,'/' IniCond.SITE '/Preprocessing/OUTPUTS/UP_to_20260417_Run32_Pglac/']; 
-dtm_file = 'dtm_Shallap_50m.mat';
-
-% Sub-path points of interest for discharge
-Directories.POIs = [Directories.root '/' IniCond.SITE '/Preprocessing/OUTPUTS/']; %POI_dtm_Shallap_50m.txt
-
-% Dependencies
-%addpath(genpath([Directories.root,'/Preprocessing/Functions'])); % Where are distributed model set-up files (needed ? yes to load dtm)
-addpath(genpath([Directories.root,'/' IniCond.SITE '/Preprocessing/OUTPUTS'])); % Where are distributed model set-up files (needed ? yes to load dtm)
-%addpath(genpath([Directories.model,'/T_and_C/TC_setups/' IniCond.SITE '/RUNS/INPUTS'])); % Where is located the meteorological forcing and Shading matrix 
-addpath(genpath([Directories.root,'/' IniCond.SITE '/Forcing'])); % Add path to Ca_Data
-addpath(genpath([Directories.root '/T&C_Code'])); %T&C source code 
+restart.id = CONFIG_vals.Restart_ID; % Set to 1 to continue an un-completed T&C run
+restart.date = CONFIG_vals.Restart_Date; %Define iter to restart
+restart.run = CONFIG_vals.Restart_Run;
 
 %=========================================================================
 %% LOCATION OF OUTPUTS - CREATION OF FOLDERS
@@ -154,12 +154,12 @@ y_cell=yllcorner:cellsize:(yllcorner+cellsize*(m_cell-1));
 UTM_Y = y(floor(length(y)/2));
 UTM_X = x(floor(length(x)/2));
 
-[Lat, Lon] = utm2deg(UTM_X, UTM_Y, '18 L');
+[Lat, Lon] = utm2deg(UTM_X, UTM_Y, CONFIG_vals.UTM_zone_text);
 
 % Load point data for saving
 %--------------------------------------------------------------------
-Points = readtable([Directories.root,'/Multipoint/OUTPUTS/' IniCond.SITE '_MultiPoints.txt']); %import table with points info
-UTM_zone = -18; % for Rio Santa
+Points = readtable(Directories.Multi); %import table with points info
+UTM_zone = CONFIG_vals.UTM_zone;
 
 % names of points
 Points_names = string(Points.Name);
@@ -211,10 +211,6 @@ opts = detectImportOptions(Directories.Vegpar);
 opts = setvartype(opts, [7:length(opts.VariableTypes)], 'double');
 TT_par = readtable(Directories.Vegpar, opts);
 
-%Save the parameter files with the model outputs
-writetable(TT_par,[Directories.save 'Parameters/' 'TT_par.xlsx']);
-writetable(OPT_PARAM,[Directories.save 'Parameters/' 'OPT_PARAM.xlsx']);
-
 % Vegetation parameters look up table
 %--------------------------------------------------------------------------
 % Codes from VEG_CODE based on predefined classification of vegetation
@@ -226,41 +222,11 @@ No_vpar = size(vpar_list,1);  %Number of vegetation classes
 
 %Veg/land parameters (was POI but renamed to reduce confusion with Points
 %of interest)
-
-% 1. Sub_Veg, 2. High Andean relict forest, 3. lakes, 4. ice
+%Load table (needed for both options)
+VPAR_T = readtable(Directories.VPAR);
 
 if OPT_Veg_Param==1
     %In this case there are single values per land cover
-    %Create table first, then grids
-    VPAR_T = table('Size', [No_vpar, 7], ...
-              'VariableTypes', {'double', 'string', 'double', 'double', 'double', 'double', 'double'}, ...
-              'VariableNames', {'Class','Veg_type', 'Ccrowns','Cwat','Curb','Crock','Cbare'});
-    
-    VPAR_T.Class = (vpar_list);
-    
-    % Representation of each vegetation class
-    VPAR_T.Veg_type = ["SucVeg","Br_al","Lakes","Ice"]';
-                    % 1. Rock, 2. High Andean relict forest, 3. lakes, 4. ice
-    % From class 1 to 10
-    % 1.Sub_Veg, 2. High Andean relict forest, 3. lakes, 4. ice
-    %              1     2     3     4     
-    VPAR_T.Ccrowns = [0.5, 0.5, 0.0, 0.0]';
-    VPAR_T.Cwat  = ([0.0,  0.0, 1.0,  0.0])';
-    VPAR_T.Curb  = ([0.0,  0.0, 0.0,  0.0])';
-    VPAR_T.Crock = ([0.3,  0.2, 0.0,  1.0])';
-    VPAR_T.Cbare = ([0.2,  0.3, 0.0,  0.0])';
-    %** Each column much equal to 1**
-    
-    %cc_max calculation
-  %  z = 1;
-   % cc_max = 1;
-%     for z = 1:size(VPAR.Class,1) %This is only needed if multiple veg types
-%     per cell
-%         if cc_max < length(VPAR.Ccrowns(z))
-%         cc_max = length(VPAR.Ccrowns(z));
-%         end
-%     end
-
     %Turn into a grid
     VPAR.Ccrown = zeros(m_cell,n_cell);
     VPAR.Cwat = zeros(m_cell,n_cell);
@@ -287,7 +253,7 @@ end
 
 %For both types
 VPAR.Class = (vpar_list); %Just a list of the numbers
-VPAR.Veg_type = ["SucVeg","Br_al","Lakes","Ice"]';
+VPAR.Veg_type = string(VPAR_T.Veg_type);
 
 %Reshape
 VPAR.Ccrownr = reshape(VPAR.Ccrown,num_cell,1);
@@ -298,11 +264,16 @@ VPAR.Cbarer = reshape(VPAR.Cbare,num_cell,1);
 cc_max = 1;
 
 % SPATIAL INDICES PER LAND COVER CLASS
-Kinde            = find(MASK==1);  %%% basin index
-idxCode.Veg1     = find(VEG_CODE == 1 & MASK == 1);
-idxCode.Veg2     = find(VEG_CODE == 2 & MASK == 1); 
-idxCode.Veg3     = find(VEG_CODE == 3 & MASK == 1); 
-idxCode.Veg4     = find(VEG_CODE == 4 & MASK == 1); 
+for v=1:No_vpar
+    fieldName = ['Veg', num2str(v)];
+    idxCode.(fieldName) = find(VEG_CODE == v & MASK == 1);
+end
+
+%Save the parameter files with the model outputs
+writetable(TT_par,[Directories.save 'Parameters/' 'TT_par.xlsx']);
+writetable(OPT_PARAM,[Directories.save 'Parameters/' 'OPT_PARAM.xlsx']);
+writetable(VPAR_T,[Directories.save 'Parameters/' 'VPAR_T.xlsx']);
+writecell(CONFIG,[Directories.save 'Parameters/' 'CONFIG.xlsx']);
 
 %-----------------------------------------------------------------------
 % 3. Glacier and snow parameters
@@ -510,7 +481,7 @@ Zs_OUT=800*ones(num_cell,1);
 %Note slight change to VPAR/POI in INI_COND, using standard not curly
 %brackets
 if restart.id ~=1
-out = [Directories.save 'Initial/INITIAL_CONDITIONS_' IniCond.SITE '.mat'];
+out = [Directories.save 'Initial/INITIAL_CONDITIONS_' site_name '.mat'];
 INIT_COND_v6(num_cell,m_cell,n_cell,...
    cc_max,ms_max,md_max,...
    MASKn,GLH,Ca,SNOWD,SNOWALB,out, ...
@@ -544,7 +515,7 @@ tic ;
 %% Restart condition here restart the simulation from a specific month
 %--------------------------------------------------------------------------
 if restart.id == 1  
-    load([Directories.save 'Store/Final_reached_step_' IniCond.SITE '.mat'])
+    load([Directories.save 'Store/Final_reached_step_' site_name '.mat'])
 end
 
 % Label for the creation of outputs
@@ -552,7 +523,7 @@ end
 output_creation = 0; 
 
 %% Display setting of the incoming T&C model runs:
-disp(['Site selected: ' IniCond.SITE])
+disp(['Site selected: ' site_name])
 disp(['Simulation period: ' datestr(x1,'dd-mmm-yyyy HH:MM') ' to ' datestr(x2,'dd-mmm-yyyy HH:MM')])
 disp(['Precipitation phase scheme: ' parameterize_phase_label{:}])
 
