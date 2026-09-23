@@ -113,8 +113,6 @@ if not(exist('OM_H','var'))
 end
 %%%%%% Snow-Ice Parameters
 if not(exist('Aice','var'))
-    SnowIce_Param.TminS=-0.8;
-    SnowIce_Param.TmaxS=2.8;
     SnowIce_Param.WatFreez_Th=-8;
     SnowIce_Param.dz_ice=0.54;
     SnowIce_Param.Th_Pr_sno=10;
@@ -125,8 +123,6 @@ if not(exist('Aice','var'))
     SnowIce_Param.Aice=0.35;
 else
     %%%%%% Snow-Ice Parameters
-    SnowIce_Param.TminS=TminS;
-    SnowIce_Param.TmaxS=TmaxS;
     SnowIce_Param.WatFreez_Th=WatFreez_Th;
     SnowIce_Param.dz_ice=dz_ice;
     SnowIce_Param.Th_Pr_sno=Th_Pr_sno;

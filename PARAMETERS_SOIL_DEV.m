@@ -139,8 +139,6 @@ In_max_rock=OPT_PARAM_vals.In_max_rock; %% [mm] Maximum interception capacity in
 
 %================== SNOW PARAMETER =================================
 
-TminS=-0.8;%% Threshold temperature snow - Shallap point value %DUPLICATE - check
-TmaxS= 2.9;%% Threshold temperature snow  %DUPLICATE - check
 ros_max1 = OPT_PARAM_vals.ros_max1;  %600; %%% [kg/m^3] - Shallap point value
 ros_max2 = OPT_PARAM_vals.ros_max2;  %450; %%% [kg/m^3] - Shallap point value
 Th_Pr_sno = OPT_PARAM_vals.Th_Pr_sno; %%% [mm/day] Threshold Intensity of snow to consider a New SnowFall - Shallap point value

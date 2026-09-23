@@ -241,7 +241,6 @@ if OPT_Veg_Param==1
         VPAR.Crock(id_land)=VPAR_T.Crock(v);
         VPAR.Cbare(id_land)=VPAR_T.Cbare(v);
     end
-
 elseif OPT_Veg_Param==2
     %Using grids now (which are created in pre-processing and loaded already), VPAR will be a structure
     VPAR.Ccrown = CCROWN;
