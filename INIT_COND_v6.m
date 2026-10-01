@@ -5,7 +5,7 @@
 function[]=INIT_COND_v6(num_cell,m_cell,n_cell,...
     cc_max,ms_max,md_max,...
     MASKn,GLH,Ca,SNOWD,SNOWALB,out, ...
-    POI, TT_par, idx_code, Slo_top_S)
+    VPAR, TT_par, idx_code, Slo_top_S,vi)
 
 %% Debugging
 %II_vect = cell2mat(POI.II);
@@ -32,10 +32,7 @@ Tdp_L_t=    zeros(num_cell,cc_max,24);
 Tdp_t=      zeros(num_cell,ms_max,24);
 V_t=        zeros(num_cell,ms_max,24);
 
-%%%%%%%%% SOIL MOISTUREPER LAYER
-% "vi" has to correspond to "Zs" and "dz" in "PARAMETERS_SOIL_....m" (->Soil layer depths)
-vi= [0    10    20    50   100   150   200   300   400    700   1000];
-  
+%Carbon_pools
 CP= 8;  %%Number of Carbon Pool (defined in "VEGETATION_MODULE_PAR.m"
 
 
@@ -374,7 +371,7 @@ Vx_Ltm1=        zeros(num_cell,cc_max);
 %disp(k)
 %valid = find(II_vect(k,:)); %Vector with valid parameters
 
-for z = 1:size(POI.Veg_type,1)
+for z = 1:size(VPAR.Class,1)
 % if isempty(II_vect) is empty, it means I am in a pixel
 % that is a rock, water or bare. It is not vegetation, and therefore, I do
 % not assign any parameter of vegetation to that pixel and the next lines
@@ -382,8 +379,8 @@ for z = 1:size(POI.Veg_type,1)
 
 fieldName = ['Veg', num2str(z)];
 id = idx_code.(fieldName);
-cc_size = 1:length(POI.Class(z));
-type = POI.Veg_type(z);
+cc_size = 1:length(VPAR.Ccrowns{z});
+type = VPAR.Veg_type{z};
 
 %% AgeL: Leaf Age [days] (FROM REFERENCE)
 AgeL_Htm1(id,cc_size) = repmat(table2array(TT_par(strcmp(TT_par.Parameters,'AgeL_Htm1'),type)),length(id),1);

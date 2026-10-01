@@ -29,10 +29,10 @@ clc; clear;
 %% SITE SETUP
 %==========================================================================
 
-site_num_list = [1 2]; %Please number sequentially
-site_name_list = {'Shallap' 'Artesonraju'};
+site_num_list = [1 2 3]; %Please number sequentially
+site_name_list = {'Shallap' 'Torre_Orsina' 'Hybas_Lvl7_Catchment_2070497830'};
 num_sites = size(site_num_list,2);
-site_num = 1; %Choose site to run, this then selects the correct site directories
+site_num = 2; %Choose site to run, this then selects the correct site directories
 site_name = site_name_list{site_num};
 
 %===================================================
@@ -54,7 +54,7 @@ IniCond.run_folder = CONFIG_vals.Run_Folder; %Define folder to save outputs
 % Model structure choices
 %========================================================================
 
-OPT_Forcing = CONFIG_vals.OPT_Forcing; %Choose type of forcing, 1= from AWS which is distributed
+OPT_Forcing = CONFIG_vals.OPT_Forcing; %Choose type of forcing, 1= from AWS which is distributed, 2= fully gridded
 OPT_Veg_Param = CONFIG_vals.OPT_Veg_Param; %Choose if vegetation parameters (for Ccrown, Cwat, Crock, Curb, Cbare) are one value per landcover type (1), or gridded and variable per landcover (2). 
 %For 1 change the values in VPAR_T directly, for 2 provide the grids in the
 %dtm_file. Note for 2 you still need the table to read the Veg_type names
@@ -76,7 +76,19 @@ Directories.forc_meteo = [Directories.forc '/' CONFIG_vals.forc_meteo_file]; met
 ta_lapse_file = CONFIG_vals.ta_lapse_file;  ta_lapse_name = CONFIG_vals.ta_lapse_name; %These are lapse rates per hour and month, in a table with a column with hour, a column with month, and a column with lapse rates (positive values)
 pr_lapse_file = CONFIG_vals.pr_lapse_file;  pr_lapse_name = CONFIG_vals.pr_lapse_name; %This is a structure Pr_lapse(m).month where each month has a linear model
 Meteo_el = CONFIG_vals.Meteo_el; %Elevation of station, used if OPT_forcing = 1
+elseif OPT_Forcing ==2
+Directories.forc_meteo = [Directories.forc '/Bias_corrected/' CONFIG_vals.forc_meteo_folder '/'];
+Directories.forc_meteoOD = [Directories.forc '/Output_Downscaling/' CONFIG_vals.forc_meteo_folder '/'];
 end
+% %Put in naming here
+% % Final function directories likely to change
+% Func_Dir = 'B:\group\pelligrp\Project_folders\MountainWater\Tethys_Chloris\Workflow_dev\Scripts\Tom\Functions'; % Root folder select
+% addpath(genpath(Func_Dir))
+% addpath(genpath('B:\group\pelligrp\Project_folders\MountainWater\Tethys_Chloris\Workflow_dev\downscaling')); % path of current downscaling folder (Mike - GitHub)
+% 
+% JOB_ID = 'Hybas_Lvl7_Catchment_2070497830_250m'; % Name of Job name from GeoData creation
+
+%***
 
 % Parameters
 Directories.Vegpar = [site_name '/Parameters/Parameters_TC.xlsx']; 
@@ -88,8 +100,8 @@ Directories.PreProc = [site_name '/Preprocessing/OUTPUTS/' CONFIG_vals.PreProc_f
 dtm_file = CONFIG_vals.dtm_file;
 
 % Sub-path points of interest for discharge and multipoints
-Directories.POIs = [site_name '/Preprocessing/OUTPUTS/']; %POI_dtm_Shallap_50m.txt
-Directories.Multi = ['Multipoint/OUTPUTS/' site_name '_MultiPoints.txt'];
+Directories.POIs = [site_name '/Preprocessing/OUTPUTS/']; %POI_dtm_Site_50m.txt
+Directories.Multi = [site_name '/Multipoint/OUTPUTS/' site_name '_MultiPoints.txt'];
 
 % Dependencies
 addpath(genpath('Functions')); % Where are distributed model set-up files (needed ? yes to load dtm)
@@ -216,19 +228,69 @@ TT_par = readtable(Directories.Vegpar, opts);
 % Codes from VEG_CODE based on predefined classification of vegetation
 % Classes are represented by the vector II. 
 
+VEG_CODE(isnan(VEG_CODE))=0; %If any NaNs replace with 0
 ksv=reshape(VEG_CODE,num_cell,1);
-vpar_list = unique(ksv(ksv~=0)); %Vegetation classes
-No_vpar = size(vpar_list,1);  %Number of vegetation classes
 
-%Veg/land parameters (was POI but renamed to reduce confusion with Points
+%Note Torre Orisina misses landcover 8 in VEG_CODE, may need to adjust
+
+%% Veg/land parameters (was POI but renamed to reduce confusion with Points
 %of interest)
 %Load table (needed for both options)
 VPAR_T = readtable(Directories.VPAR);
+vpar_list = unique(VPAR_T.Class); %Vegetation classes
+No_vpar = size(vpar_list,1);  %Number of vegetation classes
+
+%Check for C values = 1
+Headers = VPAR_T.Properties.VariableNames;
+Cvals = find(contains(Headers,{'Ccrowns','Cwat','Curb','Crock','Cbare'}));
+Ctot = sum(VPAR_T{:,Cvals},2);
+if any(Ctot~=1) 
+    disp("Warning C values do not equal to 1");
+end
+
+% For both types
+VPAR.Class = (vpar_list); %Just a list of the numbers
+VPAR.Kbot = VPAR_T.Kbot;
+VPAR.Krock = VPAR_T.Krock;
+
+%Sort Crowns
+Cro_n = contains(Headers,'Ccrowns');
+Cro_n_num = sum(Cro_n);
+IntT_cc = [VPAR_T{:,Cro_n}]; %array of values
+Cro_cell = cell(No_vpar,1);
+for v=1:No_vpar
+    Cro_cell(v) = {IntT_cc(v,:)}; %This works
+end
+VPAR_T.Ccrowns = Cro_cell;
+
+%Sort Veg_type
+Veg_n = contains(Headers,'Veg_type');
+Veg_n_num = sum(Veg_n);
+inT_Vo = [VPAR_T{:,Veg_n}]; %array of values
+
+Veg_st = strings(No_vpar,Veg_n_num);
+for v=1:No_vpar
+    Veg_st(v,:) = string(inT_Vo(v,:)); %This works
+    VPAR_T.Veg_type{v} = Veg_st(v,:); %NOTE use of curly braces to take cell array into table
+end
+
+%Clean to remove empty data for Veg_type and Ccrowns
+for v=1:No_vpar
+    vt_temp = VPAR_T.Veg_type{v};
+    cc_temp = VPAR_T.Ccrowns{v};
+    em = strcmp(vt_temp,"");
+    vt_temp(em)=[];
+    cc_temp(em)=[];
+    VPAR_T.Veg_type{v}=vt_temp;
+    VPAR_T.Ccrowns{v}=cc_temp;
+end
+VPAR.Veg_type = VPAR_T.Veg_type;
+VPAR.Ccrowns = VPAR_T.Ccrowns;
 
 if OPT_Veg_Param==1
     %In this case there are single values per land cover
     %Turn into a grid
-    VPAR.Ccrown = zeros(m_cell,n_cell);
+    VPAR.Ccrown = cell(m_cell,n_cell);
     VPAR.Cwat = zeros(m_cell,n_cell);
     VPAR.Curb = zeros(m_cell,n_cell);
     VPAR.Crock = zeros(m_cell,n_cell);
@@ -245,14 +307,14 @@ elseif OPT_Veg_Param==2
     %Using grids now (which are created in pre-processing and loaded already), VPAR will be a structure
     VPAR.Ccrown = CCROWN;
     VPAR.Cwat = CWATER;
+    if exist('CURB','var') == 1
+        VPAR.Curb = CURB;
+    else
     VPAR.Curb = CWATER.*0; %As urban 0 everywhere
+    end
     VPAR.Crock = CROCK;
     VPAR.Cbare = CBARE;
 end  
-
-%For both types
-VPAR.Class = (vpar_list); %Just a list of the numbers
-VPAR.Veg_type = string(VPAR_T.Veg_type);
 
 %Reshape
 VPAR.Ccrownr = reshape(VPAR.Ccrown,num_cell,1);
@@ -260,7 +322,14 @@ VPAR.Cwatr = reshape(VPAR.Cwat,num_cell,1);
 VPAR.Curbr = reshape(VPAR.Curb,num_cell,1);
 VPAR.Crockr = reshape(VPAR.Crock,num_cell,1);
 VPAR.Cbarer = reshape(VPAR.Cbare,num_cell,1);
+
+%Set cc_max
 cc_max = 1;
+for z = 1:No_vpar
+    if cc_max < length(VPAR_T.Ccrowns{z})
+    cc_max = length(VPAR_T.Ccrowns{z});
+    end
+end
 
 % SPATIAL INDICES PER LAND COVER CLASS
 for v=1:No_vpar
@@ -269,10 +338,16 @@ for v=1:No_vpar
 end
 
 %Save the parameter files with the model outputs
+
+%Clean CONFIG for saving
+CONFIG_s = CONFIG;
+Cmask = cellfun(@(CONFIG_s) any(isa(CONFIG_s,'missing')), CONFIG_s);
+CONFIG_s(Cmask) = {[]}; % 
+
 writetable(TT_par,[Directories.save 'Parameters/' 'TT_par.xlsx']);
 writetable(OPT_PARAM,[Directories.save 'Parameters/' 'OPT_PARAM.xlsx']);
 writetable(VPAR_T,[Directories.save 'Parameters/' 'VPAR_T.xlsx']);
-writecell(CONFIG,[Directories.save 'Parameters/' 'CONFIG.xlsx']);
+writecell(CONFIG_s,[Directories.save 'Parameters/' 'CONFIG.xlsx']);
 
 %-----------------------------------------------------------------------
 % 3. Glacier and snow parameters
@@ -398,24 +473,17 @@ Ared=ones(num_cell,1);
 % Flow Boundary Condition
 %--------------------------------------------------------------------------
 %"Xoutlet" & "Youtlet": outlet point, predefined in dtm_XXX.mat-file
-Xout_long = Xout; %This is the list of POIs (loaded with spatial data)
-Yout_long = Yout; %This is the list of POIs (loaded with spatial data)
+%** Needed for Shallap
+%Xout_long = Xout; %This is the list of POIs (loaded with spatial data)
+%Yout_long = Yout; %This is the list of POIs (loaded with spatial data)
+% *** 
 Xout = Xoutlet; % Location of outlet discharge (column)
 Yout = Youtlet; % Location of outlet discharge (this is the row)
-NAMEout = POI_names(1);
+NAMEout = POI_names(1); %CHECK this
 
 Slo_top(Youtlet,Xoutlet)=0.05; %NOTE on maps and in scatter use (X,Y) but to index use Y (row) X (col)
 npoint = length(Xout);
 Area= (cellsize^2)*sum(sum(MASK)); %% Projected area [m^2]
-
-
-% Flow potential
-%--------------------------------------------------------------------------
-ms_max = OPT_PARAM_vals.ms_max; %% Number of soil layers
-T_pot=cell(1,ms_max);
-for jk=1:ms_max
-    T_pot{jk}= T_flow;
-end
 
 % Width channel
 %--------------------------------------------------------------------------
@@ -457,12 +525,47 @@ Ohy_OUT  = Ohy.*MASK; clear Ohy
 Ohy_OUT  = reshape(Ohy_OUT,num_cell,1);
 
 %Reshape soil variables
-PSANr=reshape(PSAN/100,num_cell,1);
-PCLAr=reshape(PCLA/100,num_cell,1);
-PORGr=reshape(PORG/100,num_cell,1);
+PSANr=reshape(PSAN/100,num_cell,1); %PSAN comes in here as a %,converted to a fraction (0 to 1)
+PCLAr=reshape(PCLA/100,num_cell,1); %PCLA comes in here as a %,converted to a fraction (0 to 1)
+if max(max(PORG>40)) %Presume PORG in g/kg not %
+    PORGr=reshape(PORG/1000,num_cell,1);
+else %PORG brought in as % 
+    PORGr=reshape(PORG/100,num_cell,1);
+end
 
 % WHAT IS THIS?
 Zs_OUT=800*ones(num_cell,1);
+
+%  ---  Set Soil thickness and related params ---
+
+OPT_soil_th = OPT_PARAM_vals.OPT_soil_th;
+%First Zs and the number of soil layers is based on the maximum soil depth
+Zs_all = [0 10 20 50 100 150 200 250 300 350 500 1000 1500 2000 2500 3000 3500 4000 4500]; %All potential soil depths (ms_max +1)
+vi_all = [0 10 20 50 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100]; %All potential initial soil moistures (ms_max +1)
+if OPT_soil_th == 1
+    soil_th_max = OPT_PARAM_vals.soil_th_max; %Max soil thickness, mm
+    Zs = Zs_all(Zs_all<=soil_th_max);
+    vi = vi_all(Zs_all<=soil_th_max);
+    ms_max = size(Zs,2) - 1;
+elseif OPT_soil_th == 2
+    SOIL_TH = SOIL_TH.*10; %Convert cm to mm
+    soil_th_max =  max(max(SOIL_TH)); %Max soil thickness, mm
+    Zs = Zs_all(Zs_all<=soil_th_max); %Is it ok that the actual max thickness might not be included? Probably as these are at the top of the layer
+    vi = vi_all(Zs_all<=soil_th_max);
+    ms_max = size(Zs,2) - 1;
+end
+
+%Check
+if max(max(SOIL_TH)) < 50 || max(max(SOIL_TH)) > 5000
+    disp('Check soil units')
+end
+
+% Flow potential
+%--------------------------------------------------------------------------
+T_pot=cell(1,ms_max);
+for jk=1:ms_max
+    T_pot{jk}= T_flow;
+end
 
 %--------------------------------------------------------------------
 % 7.Solar parameters
@@ -477,14 +580,12 @@ Zs_OUT=800*ones(num_cell,1);
 %% INITIAL CONDITIONS
 %================================================
 
-%Note slight change to VPAR/POI in INI_COND, using standard not curly
-%brackets
 if restart.id ~=1
 out = [Directories.save 'Initial/INITIAL_CONDITIONS_' site_name '.mat'];
 INIT_COND_v6(num_cell,m_cell,n_cell,...
    cc_max,ms_max,md_max,...
    MASKn,GLH,Ca,SNOWD,SNOWALB,out, ...
-   VPAR, TT_par, idxCode, Slo_top);
+   VPAR, TT_par, idxCode, Slo_top,vi);
 load(out);
 end
 
@@ -537,6 +638,7 @@ if OPT_Aval == 0; disp('Avalanching: off'); else; disp('Avalanching: on'); end
 %Consider sensor heights - you should add these onto the plant height in
 %the zatm parameters
 
+if OPT_Forcing == 1
 Meteo_data = load(Directories.forc_meteo,meteo_name);
 Meteo_data = Meteo_data.(meteo_name);
 %** site specific
@@ -585,15 +687,51 @@ Forcing_Date_num =datenum(Forcing_Date);
 [SD,SB,SAD1,SAD2,SAB1,SAB2,PARB,PARD,N,Rsws,t_bef,t_aft]=Automatic_Radiation_Partition_I(Forcing_Date_num,Lat,Lon,Meteo_el,IniCond.DeltaGMT,Pr,Tdew,SWin,GRAPH_VAR);
 clear N Rsws
 
+% =======  Set for fully distributed
+elseif OPT_Forcing == 2
+t_bef = CONFIG_vals.t_bef;
+t_aft = CONFIG_vals.t_aft;
+
+%========== For On The Fly distributed forcing ======
+elseif OPT_Forcing == 3
+% % load datasets
+% RunBC = 1; % To run bias-correction of the on-the-fly downscaled grids - need this as an option 1/0 () = no bias correction only downscaling_
+% dsERA = load(ERAdataFile);
+% dsGRID = load(GRIDdataFile);
+% load(BCcoeffFile)
+% 
+% dim = 'grid';
+% n = 1500;
+% demCurv = getcurvature(dsGRID.demZs,n);
+% 
+% dsGRID.pixelSize = abs(dsGRID.demLats(1,1)-dsGRID.demLats(2,1))*111.1e3; % (m)
+% [dsGRID.demSlope,dsGRID.demAspect] = slopeaspect(dsGRID.demZs,dsGRID.pixelSize);
+% 
+% % Precipitation gradient + Mean Annual Precipitation
+% dsERA.tpLr = 0.003; % Precipitation gradient (mm yr-1 m-1)
+% nYrs = years(DateRange(end)+(hours(1)) - DateRange(1));
+% dsERA.tpMean = nansum(dsERA.tp,3)/nYrs;
+% 
+% % Set output grids to be the dem grid resolutions (default are provided
+% % bias-correction locations if not)
+% dsGRID.dsLats = dsGRID.demLats; dsGRID.dsLons = dsGRID.demLons; dsGRID.dsZs = dsGRID.demZs;
+%  
+% %Load ERA data
+% %Load bias correction coefficents
+
+
+
+end
+
 % Solar variables (just for Lmax_day)
 %--------------------------------------------------------------------------
 L_day=zeros(length(Datam),1);
 for j=2:24:length(Datam)
-    [h_S,delta_S,zeta_S,T_sunrise,T_sunset,L_day(j)]= SetSunVariables(Datam(j,:),IniCond.DeltaGMT,Lon,Lat,t_bef,t_aft);
+    [~,~,~,~,~,L_day(j)]= SetSunVariables(Datam(j,:),IniCond.DeltaGMT,Lon,Lat,t_bef,t_aft);
 end
 
 Lmax_day = max(L_day);
-clear('h_S','delta_S','zeta_S','T_sunrise','T_sunset','L_day')
+clear('L_day')
 
 %=========================================================================
 %% Iterating on time
@@ -644,14 +782,15 @@ for t=fts:N_time_step
     %======================================================================      
 
     %So create new data every month
-    if ~exist('Ta_P', 'var') || str2num(yy) ~= year_loaded || str2num(mth) ~= month_loaded
+    if ~exist('Ta_S', 'var') || str2num(yy) ~= year_loaded || str2num(mth) ~= month_loaded
 
     disp(['New forcing loaded for period: ' char(num2str(yy)) '-' char(num2str(mth)) ])    
 
-    %% Pull out meteo data for the month for each variable  (before spatial distribution)
+    %  ===== So for weather station point =========
+    if OPT_Forcing == 1
+    % Pull out meteo data for the month for each variable  (before spatial distribution)
     id_date_for_month = ismember(Forcing_Date,date_forMonth); %So this is the index of the forcing data for this month
     
-    % So for weather station point
     %Temperature
     Ta_P = Ta(id_date_for_month); %For the hour
     %Sort later.....Ta_P_day = Ta(pdind); %For the 24 hours before
@@ -676,81 +815,162 @@ for t=fts:N_time_step
     PARB_P = PARB(id_date_for_month);
     PARD_P = PARD(id_date_for_month);
     %Air pressure will be calculated based on elevation
+    end
 
     %=============================================
     %% Disribute meteorological variables
     % ===========================================
     %Then create grids for every cell so time in rows, space in columns
     %Preallocate where necessary
-    size_time_in_month = sum(id_date_for_month);
-    Ta_S = NaN(size_time_in_month,num_cell);
-    Pr_S = NaN(size_time_in_month,num_cell);
-    N_S = NaN(size_time_in_month,num_cell);
-    Tdew_S = NaN(size_time_in_month,num_cell);
-    SAB1_S = NaN(size_time_in_month,num_cell);
-    SAB2_S = NaN(size_time_in_month,num_cell);
-    PARB_S = NaN(size_time_in_month,num_cell);
-    Pr_ratio = NaN(size_time_in_month,num_cell);
 
-    for tinm = 1:size_time_in_month %So run over each hour
-        m_temp = month(date_forMonth(tinm));
-        h_temp = hour(date_forMonth(tinm));
-        mh_id = hm_Ta_lapse.hour==h_temp & hm_Ta_lapse.month==m_temp;
-        Ta_lapse = -hm_Ta_lapse.Ta_lapse(mh_id); %So this is the lapse rate per hour and month - note converting to negative rate
-        Tdew_lapse = Ta_lapse; %Its ok to use the same lapse rate
-        %Air temperature, degrees C
-        Ta_S(tinm,:) = Ta_P(tinm) + (Ta_lapse.*(DTMn-Meteo_el)); %Lapse rates should be negative
-        %Precipitation, mm - This uses the WRF ratio v el relationship
-        Pr_ratio(tinm,:) = (Pr_lapse(m_temp).month.p1.*DTMn) + Pr_lapse(m_temp).month.p2;  %val(x) = p1*x + p2
-        Pr_S(tinm,:) = Pr_ratio(tinm,:).*Pr_P(tinm); %Apply ratio
-        %Longwave radiation, W m-2
-        N_S(tinm,:) = N_P(tinm) + (Ldown_lapse.*(DTMn-Meteo_el));
-        %Dew point temperature, degrees C
-        Tdew_S(tinm,:) = Tdew_P(tinm) + (Tdew_lapse.*(DTMn-Meteo_el)); %Lapse rates should be negative
-        %Direct radiation with elevation
-        if SAB1_P(tinm)>0 %Only if radiation values
-            SAB1_S(tinm,:) = SAB1_P(tinm) + (SAB1_lapse.*(DTMn-Meteo_el)); %Radiation should increase with elevation
-        else
-            SAB1_S(tinm,:) = 0;
+    %==== Load point data =====
+    if OPT_Forcing == 1
+        size_time_in_month = sum(id_date_for_month);
+        Ta_S = NaN(size_time_in_month,num_cell);
+        Pr_S = NaN(size_time_in_month,num_cell);
+        N_S = NaN(size_time_in_month,num_cell);
+        Tdew_S = NaN(size_time_in_month,num_cell);
+        SAB1_S = NaN(size_time_in_month,num_cell);
+        SAB2_S = NaN(size_time_in_month,num_cell);
+        PARB_S = NaN(size_time_in_month,num_cell);
+        Pr_ratio = NaN(size_time_in_month,num_cell);
+    
+        for tinm = 1:size_time_in_month %So run over each hour
+            m_temp = month(date_forMonth(tinm));
+            h_temp = hour(date_forMonth(tinm));
+            mh_id = hm_Ta_lapse.hour==h_temp & hm_Ta_lapse.month==m_temp;
+            Ta_lapse = -hm_Ta_lapse.Ta_lapse(mh_id); %So this is the lapse rate per hour and month - note converting to negative rate
+            Tdew_lapse = Ta_lapse; %Its ok to use the same lapse rate
+            %Air temperature, degrees C
+            Ta_S(tinm,:) = Ta_P(tinm) + (Ta_lapse.*(DTMn-Meteo_el)); %Lapse rates should be negative
+            %Precipitation, mm - This uses the WRF ratio v el relationship
+            Pr_ratio(tinm,:) = (Pr_lapse(m_temp).month.p1.*DTMn) + Pr_lapse(m_temp).month.p2;  %val(x) = p1*x + p2
+            Pr_S(tinm,:) = Pr_ratio(tinm,:).*Pr_P(tinm); %Apply ratio
+            %Longwave radiation, W m-2
+            N_S(tinm,:) = N_P(tinm) + (Ldown_lapse.*(DTMn-Meteo_el));
+            %Dew point temperature, degrees C
+            Tdew_S(tinm,:) = Tdew_P(tinm) + (Tdew_lapse.*(DTMn-Meteo_el)); %Lapse rates should be negative
+            %Direct radiation with elevation
+            if SAB1_P(tinm)>0 %Only if radiation values
+                SAB1_S(tinm,:) = SAB1_P(tinm) + (SAB1_lapse.*(DTMn-Meteo_el)); %Radiation should increase with elevation
+            else
+                SAB1_S(tinm,:) = 0;
+            end
+            if SAB2_P(tinm)>0
+                SAB2_S(tinm,:) = SAB2_P(tinm) + (SAB2_lapse.*(DTMn-Meteo_el)); %Radiation should increase with elevation
+            else
+                SAB2_S(tinm,:) = 0;
+            end
+            if PARB_P(tinm)>0
+            PARB_S(tinm,:) = PARB_P(tinm) + (PARB_lapse.*(DTMn-Meteo_el)); %Radiation should increase with elevation
+            else 
+                PARB_S(tinm,:) =0;
+            end
+        end %Going over time steps within month
+    
+        %Air pressure (calculated directly from elevation)
+        Pre_temp = (101325*((1-(0.0065.*DTMn./288.15)).^(9.18*0.0289644./(8.31447*0.0065))))./100; %/100 converts to mbar
+        Pre_S = repmat(Pre_temp',size_time_in_month,1); %Copy to all time steps
+    
+        %Use the lapsed dew point temprature to derive relative humidity
+        c=237.3; b=17.27;
+        U_S = 100*exp((c*b.*(Tdew_S - Ta_S))./((c+Ta_S).*(c+Tdew_S)));
+        clear c b 
+        if max(max(U_S))>=1
+        U_S = U_S./100; %Turn into fraction
+        U_S(U_S>1) = 1; %Cannot be more than 100%
         end
-        if SAB2_P(tinm)>0
-            SAB2_S(tinm,:) = SAB2_P(tinm) + (SAB2_lapse.*(DTMn-Meteo_el)); %Radiation should increase with elevation
-        else
-            SAB2_S(tinm,:) = 0;
-        end
-        if PARB_P(tinm)>0
-        PARB_S(tinm,:) = PARB_P(tinm) + (PARB_lapse.*(DTMn-Meteo_el)); %Radiation should increase with elevation
-        else 
-            PARB_S(tinm,:) =0;
-        end
-    end %Going over time steps within month
+    
+        %Here we use the same wind speed everywhere
+        %At the moment turn into S vector grids
+        Ws_S = repmat(Ws_P,1,num_cell); %So the same in all grid cells
+        %Diffuse radiation can be the same everywhere
+        SAD1_S = repmat(SAD1_P',1,num_cell); %So the same in all grid cells
+        SAD2_S = repmat(SAD2_P',1,num_cell); %So the same in all grid cells
+        PARD_S = repmat(PARD_P',1,num_cell); %So the same in all grid cell
+    end
 
-    %Apply Tmod to whole month - note this is based on initial ice thickness
+    %========= Load gridded data ========
+    if OPT_Forcing == 2
+        %Sort time
+        StartMonth = datetime(str2double(yy),str2double(mth),1,0,0,0,0);
+        EndMonth = dateshift(StartMonth,'end','month'); EndMonth = EndMonth + hours(23);
+        Forcing_Date = StartMonth:hours(1):EndMonth; Forcing_Date = Forcing_Date';
+        id_date_for_month = ismember(Forcing_Date,date_forMonth); %So this is the index of the forcing data for this month. date_forMonth created in Initialising outputs
+        size_time_in_month = sum(id_date_for_month);
+        %Load variables
+        forc_vars = ["t2m" "d2m" "tp" "RH" "sp" "ws10" "strd" "N" "PARB" "PARD" "SAB1" "SAB2" "SAD1" "SAD2"]; 
+        forc_names = split(CONFIG_vals.forc_meteo_name); 
+        OD_vars = contains(forc_vars,["RH","strd","sp","ws10"]);
+        num_forc_vars = size(forc_vars,2);
+        for v = 1:num_forc_vars
+            if OD_vars(v)==0
+            fn = char(strcat(Directories.forc_meteo,yy,'/',forc_vars(v), '_',yy,'_',mth,'.mat'));
+            Forc_S.forc_vars{v} = load(fn);   
+            else
+            fn = char(strcat(Directories.forc_meteoOD,yy,'/',forc_vars(v), '_',yy,'_',mth,'.mat'));
+            Forc_S.forc_vars{v} = load(fn);
+            end
+        end
+
+        %Then decompress, flip and reshape
+        for v=1:num_forc_vars
+            %** Warning the decompress code changes the magnitude of the
+            %variables so they should have been compressed before. **
+            Forc_S_dc.(forc_vars{v}) = Data_compressor_grid(Forc_S.forc_vars{v}.(forc_names{v}),forc_vars(v),"decompress");
+            Forc_S_dc.(forc_vars{v}) =  flipud(Forc_S_dc.(forc_vars{v}));
+            for ht = 1:size(Forcing_Date,1) %Probably this could be faster 
+            Forc_S_dc_r.(forc_vars{v})(ht,:) = reshape(Forc_S_dc.(forc_vars{v})(:,:,ht),[1,num_cell]); %Reshape to be time (rows) by grid cells (columns)
+            end
+        end
+        %Bring into correct names and apply small corrections
+        %Also crops in case the run time is shorter
+        Ta_S = double(Forc_S_dc_r.t2m(id_date_for_month,:)); %Air temperature, degrees C
+        Pr_S = double(Forc_S_dc_r.tp(id_date_for_month,:)); %Precipitation, mm
+        U_S = double(Forc_S_dc_r.RH(id_date_for_month,:)); %Relative humidity, %
+        N_S = double(Forc_S_dc_r.strd(id_date_for_month,:)); %Incoming Longwave (note N in the ERA data is cloudiness), Wm^-2
+        Tdew_S = double(Forc_S_dc_r.d2m(id_date_for_month,:)); %Dew point temperature, degrees C
+        Pre_S = double(Forc_S_dc_r.sp(id_date_for_month,:)); %Surface pressure
+        Ws_S = double(Forc_S_dc_r.ws10(id_date_for_month,:)); %Wind speed, ms-1
+        SAB1_S = double(Forc_S_dc_r.SAB1(id_date_for_month,:)); %First band direct radiation, Wm^-2
+        SAB2_S = double(Forc_S_dc_r.SAB2(id_date_for_month,:)); %Decond band direct radiation, Wm^-2
+        SAD1_S = double(Forc_S_dc_r.SAD1(id_date_for_month,:)); %First band diffuse radiation, Wm^-2
+        SAD2_S = double(Forc_S_dc_r.SAD2(id_date_for_month,:)); %Second band diffuse radiation, Wm^-2
+        PARB_S = double(Forc_S_dc_r.PARB(id_date_for_month,:)); %PAR radiation direct, Wm^-2
+        PARD_S = double(Forc_S_dc_r.PARD(id_date_for_month,:)); %PAR radiation diffuse Wm^-2
+
+        %Corrections
+        if max(max(U_S))>=1
+            U_S = U_S./100; %Turn into fraction
+            U_S(U_S>1) = 1; %Cannot be more than 100%
+        end
+        Ws_S(Ws_S < 0.01) = 0.01; %To prevent 0 turbulent fluxes
+        if max(max(Pre_S))>10000
+        Pre_S = Pre_S./100; %Convert from Pascals to mbar/hectopascal
+        end
+    end
+
+%========= Further forcing steps for all types ==========
+    
+    % ----- Apply Tmod ----------
+    % This is applied to whole month - note this is based on initial ice thickness
+    OPT_Tmod = OPT_PARAM_vals.OPT_Tmod;
+    %If OPT_Tmod = 0 then no change
+
+    if OPT_Tmod == 1
+    idcli = GLHn>0 & DEB_MAPn == 0; %Clean ice only
+    idcli_r = repmat(idcli',size_time_in_month,1);
+    idTa = Ta_S>0;  %Apply when >0
+    idapply = idTa & idcli_r; %So where Temp threshold exceeded and over clean ice
+    Ta_S(idapply) = Ta_S(idapply) - TmodB; %Only remove bias
+    elseif OPT_Tmod ==2
     idcli = GLHn>0 & DEB_MAPn == 0; %Clean ice only
     idcli_r = repmat(idcli',size_time_in_month,1);
     Ta_S(idcli_r) = Ta_S(idcli_r) - TmodB; %So remove bias first (over clean ice)
     idTa = Ta_S>0;  %Apply multiplier when >0
     idapply = idTa & idcli_r; %So where Temp threshold exceeded and over clean ice
     Ta_S(idapply) = Ta_S(idapply).*TmodM; %Apply Tmod multiplier
-
-    %Air pressure (calculated directly from elevation)
-    Pre_temp = (101325*((1-(0.0065.*DTMn./288.15)).^(9.18*0.0289644./(8.31447*0.0065))))./100; %/100 converts to mbar
-    Pre_S = repmat(Pre_temp',size_time_in_month,1); %Copy to all time steps
-
-    %Use the lapsed dew point temprature to derive relative humidity
-    c=237.3; b=17.27;
-    U_S = 100*exp((c*b.*(Tdew_S - Ta_S))./((c+Ta_S).*(c+Tdew_S)));
-    clear c b 
-    U_S = U_S./100; %Turn into fraction
-    U_S(U_S>1) = 1; %Cannot be more than 100%
-
-    %Do we apply a wind speed lapse rate?
-    %At the moment turn into S vector grids
-    Ws_S = repmat(Ws_P,1,num_cell); %So the same in all grid cells
-    %Diffuse radiation can be the same everywhere
-    SAD1_S = repmat(SAD1_P',1,num_cell); %So the same in all grid cells
-    SAD2_S = repmat(SAD2_P',1,num_cell); %So the same in all grid cells
-    PARD_S = repmat(PARD_P',1,num_cell); %So the same in all grid cells
+    end
 
     % Vapor pressure - calculate based on distributed Ta and U
     % esat/ea/Ds/Tdew grids of month of time x cell
@@ -760,18 +980,26 @@ for t=fts:N_time_step
     Ds_S= esat_S - ea_S;              %Vapor Pressure Deficit (Pa)
     Ds_S(Ds_S<0)=0; 
     %Don't recalculate Tdew - its above
+    %NOTE SHOULD WE ADJUST DEW POINT WITH LOWER AIR TEMP FROM TMOD?
     clear a b xr;
+
+    %---- Check variables -----
+    %We only check inside the mask in case there are NaNs outside.
+    check_var_3D(Ta_S(:,MASKn==1),Tdew_S(:,MASKn==1),Pr_S(:,MASKn==1),N_S(:,MASKn==1),Ws_S(:,MASKn==1),Pre_S(:,MASKn==1),esat_S(:,MASKn==1),ea_S(:,MASKn==1),U_S(:,MASKn==1),SAD1_S(:,MASKn==1),SAD2_S(:,MASKn==1),SAB1_S(:,MASKn==1),SAB2_S(:,MASKn==1),PARB_S(:,MASKn==1),PARD_S(:,MASKn==1));
     
 %     % Store year and month loaded
 %     %----------------------------------------------------------------------
     year_loaded = str2num(yy);
     month_loaded = str2num(mth);
 % 
-     end
+    end %Loading month of data
 
     %% All now on single timestep
     % Finding the row in the forcing of the modeling date      
     t_forc = find(Date(t-1) == date_forMonth); %Pulls out the index for the hour - note this means that it actually starts on t=1
+
+    %Put here downscaling
+    %And the partition of SW
     
     %Export timestep (a row for all the cells)
     Ta_St = Ta_S(t_forc,:);
@@ -801,15 +1029,10 @@ for t=fts:N_time_step
 
     %% 
 
-    % Other parameters
-    %----------------------------------------------------------------------
-    %t_bef=1; t_aft=0; % otherwise problems when loading SWPART
-
     % Reshape - This because of the problem in the Hydrological module
     %----------------------------------------------------------------------
     Slo_top2 = reshape(Slo_top,num_cell,1); % Creating aux variable for the hydrological module
     aTop = reshape(aTop,num_cell,1);
-    %Slo_top = reshape( Slo_top,num_cell,1);
 
     %% Radiation Part B 
     %Run per timestep now
@@ -820,6 +1043,9 @@ for t=fts:N_time_step
     %needed, if terrain effects have not been considered during pre-processing
     cos_fst = cos(atan(Slo_top))*sin(h_S) + sin(atan(Slo_top)).*cos(h_S).*cos(zeta_S-Aspect*pi/180);
     cos_fst(cos_fst<0)=0; %cos_fst is x,y grid   
+
+    %Max added a correction for numerical problems here
+    %if sin(h_S_<=0.10) radiation vars = 0;
 
     %Reshape radiation grids for calculations
     %Note shifting to rows to match radiation inputs
@@ -856,39 +1082,31 @@ for t=fts:N_time_step
     Ca_S = Ca(t)*MASKn; %Carbon is already set on the correct time series
     IrD_S =  MASKn*0; %Setting as 0
     Salt_S =  MASKn*0; %Setting as 0
-    %N_S = N(t)*MASKn;
 
     %% Swapping other grids
     Afirnn = reshape(Afirn,num_cell,1);
     SOIL_THn = reshape(SOIL_TH,num_cell,1);
-
-    %{
-    forcing.t2m = t2m;
-    forcing.d2m = d2m;
-    forcing.tp = tp;
-    forcing.ws10 = ws10;
-    forcing.sp = sp; 
-
-    check_var(forcing, ...
-    ["t2m" ... % Temperature
-    "d2m" ...  % Dew Point temperature
-    "tp" ...   % Precipitation
-    "ssrd" ... % Downward short wave radiation
-    "strd" ... % Downdward Long wave radiation
-    "ws10" ... % Wind speed
-    "sp" ...   % Air pressure
-    "es" ...   % saturation vapor pressure
-    "ea" ...   % actual vapor pressure
-    "RH" ...   % Relative humidity
-    "SAD1" ... % SAD1
-    "SAD2" ... % SAD2
-    "SAB1" ... % SAB1
-    "SAB2" ... % SAB2
-    "PARB" ... % PARB
-    "PARD" ... % PARD
-    "N" ...    % Cloudiness
-    ],Point)
-    %}
+% 
+%     check_var(forcing, ...
+%     ["t2m" ... % Temperature
+%     "d2m" ...  % Dew Point temperature
+%     "tp" ...   % Precipitation
+%     "ssrd" ... % Downward short wave radiation
+%     "strd" ... % Downdward Long wave radiation
+%     "ws10" ... % Wind speed
+%     "sp" ...   % Air pressure
+%     "es" ...   % saturation vapor pressure
+%     "ea" ...   % actual vapor pressure
+%     "RH" ...   % Relative humidity
+%     "SAD1" ... % SAD1
+%     "SAD2" ... % SAD2
+%     "SAB1" ... % SAB1
+%     "SAB2" ... % SAB2
+%     "PARB" ... % PARB
+%     "PARD" ... % PARD
+%     "N" ...    % Cloudiness
+%     ],Point)
+%     %}
     
     %% SPATIAL INITIALIZATION VECTOR PREDEFINING
     %======================================================================
@@ -1226,10 +1444,10 @@ for t=fts:N_time_step
              VegL_Param_Dyn, Stoich_H,       aSE_H,        Stoich_L,   aSE_L,       fab_H,...
              fbe_H,          fab_L,          fbe_L,        ZR95_H,     ZR95_L,      In_max_urb,...
              In_max_rock,    K_usle,         Urb_Par,      Deb_Par,    Zs_deb,      Sllit,...
-             Kct,            ExEM,           ParEx_H,      Mpar_H,     ParEx_L,     Mpar_L,] = ....
+             Kct,            ExEM,           ParEx_H,      Mpar_H,     ParEx_L,     Mpar_L] = ....
                                     PARAMETERS_SOIL_DEV( ...
              ksv(ij),        PSANr(ij),       PCLAr(ij),     PORGr(ij),   DEB_MAPn(ij),  md_max,...
-             Afirnn(ij),      SOIL_THn(ij),    VPAR,        TT_par,        OPT_PARAM_vals);
+             Afirnn(ij),      SOIL_THn(ij),    VPAR,        TT_par,       OPT_PARAM_vals, Zs, ms_max);
 
             %Extract C values directly from grids
             Ccrown = VPAR.Ccrownr(ij);
@@ -1414,7 +1632,7 @@ y = 1;
      LAI_H(ij,:),           SAI_H(ij,:),         LAI_L(ij,:),      SAI_L(ij,:),         LAIdead_H(ij,:), ...
      LAIdead_L(ij,:),       Rrootl_H(ij,:),      Rrootl_L(ij,:),   BLit(ij,:),          Sllit,   ...
      Kct,                   Datam_S,             IniCond.DeltaGMT, Lon,                 Lat,     ...
-     t_bef,                 t_aft,               Ccrown,           Cbare,               Crock,  ...
+     t_bef,                 t_aft,               Ccrown{:},        Cbare,               Crock,  ...
      Curb,                  Cwat,                SAB1_St(ij),      SAB2_St(ij),         SAD1_St(ij), ...
      SAD2_St(ij),           PARB_St(ij),         PARD_St(ij),      SvFn(ij),            SNDtm1(ij),  ...
      snow_albedotm1(ij,:),  Color_Class,         OM_H,             OM_L,                PFT_opt_H,     ...
@@ -1434,7 +1652,7 @@ y = 1;
      Slo_top2(ij),          Slo_head(ij,:),      Asur(ij),         Ared(ij),            aTop(ij), ...
      EKtm1(ij),             q_runon(ij),         Qi_in(ij,:),      Ws_undertm1(ij),     Pr_sno_t(ij,:), ...
      pow_dis,               a_dis,               Salt_S(ij),       SPAR,                SNn(ij), ...
-     min_SPD,           OPT_VegSnow,         OPT_SoilTemp,     OPT_PlantHydr,       Opt_CR, ...
+     min_SPD,               OPT_VegSnow,         OPT_SoilTemp,     OPT_PlantHydr,       Opt_CR, ...
      Opt_ST,                Opt_ST2,             OPT_SM,           OPT_STh,             OPT_FR_SOIL, ...
      OPT_PH,                parameterize_phase,  hSTL,             OPT_Albsno);
     %catch ME

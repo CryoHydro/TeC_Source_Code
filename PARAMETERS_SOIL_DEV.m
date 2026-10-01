@@ -24,8 +24,8 @@ function[aR,              Zs,         EvL_Zs,      Inf_Zs,     Bio_Zs, ...
          ParEx_H,         Mpar_H,     ParEx_L,     Mpar_L] ...
                      =PARAMETERS_SOIL_DEV( ...
          cell_class,      Psan,       Pcla,        Porg,       dbThick, ...
-         md_max,          Afirn,      Soil_th,     POI,        TT_par, ...
-         OPT_PARAM_vals)
+         md_max,          Afirn,      Soil_th,     VPAR,        TT_par, ...
+         OPT_PARAM_vals,  Zs,         ms)
 
 fpr = 1;
 aR =100;
@@ -33,23 +33,17 @@ aR =100;
 
 %% SOIL PARAMETERS
 %==========================================================================
-ms=OPT_PARAM_vals.ms_max; % Number of soil layers (has to correspond to "ms_max" in the launcher)
 
-%         Depth1 Depth2 Depth3  Depth4  - these are classes
-Kbot  =  [0.1    0.1    0.1     0.1 ]; % Conductivity at the bedrock layer [mm/h] 
-Krock =  [0.1    0.1    0.1     0.1 ]; % Conductivity of Fractured Rock [mm/h] 
-
-Kbot = Kbot(cell_class); % Conductivity of the bedrock [mm/h] 
-Krock =Krock(cell_class); % Hydraulic conductivity fractured rock [mm/h]
+%  One value per class
+Kbot  = VPAR.Kbot(cell_class); % Conductivity at the bedrock layer [mm/h] 
+Krock =  VPAR.Krock(cell_class); % Conductivity of Fractured Rock [mm/h] 
 
 %% Soil layer depths [mm]
 %--------------------------------------------------------------------------
-% "Zs" & "dz" have to correspond to "vi" in the launcher (->SOIL MOISTURE)
-% Soil layers
+% "Zs" & "dz" have to correspond to "vi" in the launcher (->SOIL MOISTURE).
+% Zs now given in launcher
 %--------------------------------------------------------------------------
 
-%    Depth1  Depth2  Depth3   Depth4  Depth5  Depth6   Depth7   Depth8   Depth9  Depth10
-Zs= [0       10      20       50      100     150      200      300      1000    1500     2500]; % Depth of top of the soil layer [mm],  ms+1
 Zdes = OPT_PARAM_vals.Zdes; % Depth of evaporation layer [mm]
 Zinf = OPT_PARAM_vals.Zinf; % Depth of infiltration layer (=first layer) [mm]
 Zbio = OPT_PARAM_vals.Zbio; % Depth of the active Biogeochemistry zone [mm]
@@ -79,8 +73,8 @@ end
 Color_Class = 0;
 
 %C values now given as grids after Parameters Soil
-cc      = length(POI.Veg_type(cell_class)); %Note this was POI.Crown and is used in case there are multiple Crowns per landcover
-II      = POI.Veg_type(cell_class); %Name of cell type
+cc      = length(VPAR.Ccrowns{cell_class}); %Note this was POI.Crown and is used in case there are multiple Crowns per landcover
+II      = VPAR.Veg_type{cell_class}; %Name of cell type
 
 % Elevation 
 zatm = table2array(TT_par(strcmp(TT_par.Parameters,'zatm_surface'),II)); %% Reference Height
@@ -112,7 +106,8 @@ Ks_Zs= Ks*ones(1,ms); %%[mm/h]
 
 %%%%%%%%%%%%%%%% Define soil layer depth by specifying 
 %%%%%%%%%%%%%%%% impermeable layer at given layer
-Soil_th=Zs(end)*(Soil_th/100); %% convert from relative to absolute depth
+%Only use if a %...
+%Soil_th=Zs(end)*(Soil_th/100); %% convert from relative to absolute depth
 [~, ix]= min(abs(Zs-Soil_th));
 if ix==1
     ix=2;
