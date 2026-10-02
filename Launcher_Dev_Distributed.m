@@ -32,7 +32,7 @@ clc; clear;
 site_num_list = [1 2 3]; %Please number sequentially
 site_name_list = {'Shallap' 'Torre_Orsina' 'Hybas_Lvl7_Catchment_2070497830'};
 num_sites = size(site_num_list,2);
-site_num = 2; %Choose site to run, this then selects the correct site directories
+site_num = 3; %Choose site to run, this then selects the correct site directories
 site_name = site_name_list{site_num};
 
 %===================================================
@@ -76,19 +76,12 @@ Directories.forc_meteo = [Directories.forc '/' CONFIG_vals.forc_meteo_file]; met
 ta_lapse_file = CONFIG_vals.ta_lapse_file;  ta_lapse_name = CONFIG_vals.ta_lapse_name; %These are lapse rates per hour and month, in a table with a column with hour, a column with month, and a column with lapse rates (positive values)
 pr_lapse_file = CONFIG_vals.pr_lapse_file;  pr_lapse_name = CONFIG_vals.pr_lapse_name; %This is a structure Pr_lapse(m).month where each month has a linear model
 Meteo_el = CONFIG_vals.Meteo_el; %Elevation of station, used if OPT_forcing = 1
-elseif OPT_Forcing ==2
+elseif OPT_Forcing == 2
 Directories.forc_meteo = [Directories.forc '/Bias_corrected/' CONFIG_vals.forc_meteo_folder '/'];
 Directories.forc_meteoOD = [Directories.forc '/Output_Downscaling/' CONFIG_vals.forc_meteo_folder '/'];
+elseif OPT_Forcing == 3
+meteo_name = CONFIG_vals.forc_meteo_name; %e.g. 'Hybas_Lvl7_Catchment_2070497830_250m'
 end
-% %Put in naming here
-% % Final function directories likely to change
-% Func_Dir = 'B:\group\pelligrp\Project_folders\MountainWater\Tethys_Chloris\Workflow_dev\Scripts\Tom\Functions'; % Root folder select
-% addpath(genpath(Func_Dir))
-% addpath(genpath('B:\group\pelligrp\Project_folders\MountainWater\Tethys_Chloris\Workflow_dev\downscaling')); % path of current downscaling folder (Mike - GitHub)
-% 
-% JOB_ID = 'Hybas_Lvl7_Catchment_2070497830_250m'; % Name of Job name from GeoData creation
-
-%***
 
 % Parameters
 Directories.Vegpar = [site_name '/Parameters/Parameters_TC.xlsx']; 
@@ -109,7 +102,11 @@ addpath(genpath([site_name '/Preprocessing/OUTPUTS'])); % Where are distributed 
 %addpath(genpath([Directories.model,'/T_and_C/TC_setups/' site_name '/RUNS/INPUTS'])); % Where is located the meteorological forcing and Shading matrix 
 addpath(genpath([site_name '/Forcing'])); % Add path to Ca_Data
 addpath(genpath('T&C_Code')); %T&C source code 
-
+% **** TEMPORARY **
+Func_Dir = 'B:\group\pelligrp\Project_folders\MountainWater\Tethys_Chloris\Workflow_dev\Scripts\Tom\Functions'; % Root folder select
+addpath(genpath(Func_Dir))
+addpath(genpath('B:\group\pelligrp\Project_folders\MountainWater\Tethys_Chloris\Workflow_dev\downscaling')); % path of current downscaling folder (Mike - GitHub)
+%***
 
 % Modelling period and time
 %--------------------------------------------------------------------------
@@ -243,7 +240,7 @@ No_vpar = size(vpar_list,1);  %Number of vegetation classes
 %Check for C values = 1
 Headers = VPAR_T.Properties.VariableNames;
 Cvals = find(contains(Headers,{'Ccrowns','Cwat','Curb','Crock','Cbare'}));
-Ctot = sum(VPAR_T{:,Cvals},2);
+Ctot = sum(VPAR_T{:,Cvals},2,'omitnan');
 if any(Ctot~=1) 
     disp("Warning C values do not equal to 1");
 end
@@ -266,6 +263,8 @@ VPAR_T.Ccrowns = Cro_cell;
 %Sort Veg_type
 Veg_n = contains(Headers,'Veg_type');
 Veg_n_num = sum(Veg_n);
+
+VPAR_T = convertvars(VPAR_T,Veg_n,"cell");
 inT_Vo = [VPAR_T{:,Veg_n}]; %array of values
 
 Veg_st = strings(No_vpar,Veg_n_num);
@@ -338,7 +337,6 @@ for v=1:No_vpar
 end
 
 %Save the parameter files with the model outputs
-
 %Clean CONFIG for saving
 CONFIG_s = CONFIG;
 Cmask = cellfun(@(CONFIG_s) any(isa(CONFIG_s,'missing')), CONFIG_s);
@@ -537,7 +535,6 @@ end
 Zs_OUT=800*ones(num_cell,1);
 
 %  ---  Set Soil thickness and related params ---
-
 OPT_soil_th = OPT_PARAM_vals.OPT_soil_th;
 %First Zs and the number of soil layers is based on the maximum soil depth
 Zs_all = [0 10 20 50 100 150 200 250 300 350 500 1000 1500 2000 2500 3000 3500 4000 4500]; %All potential soil depths (ms_max +1)
@@ -694,33 +691,23 @@ t_aft = CONFIG_vals.t_aft;
 
 %========== For On The Fly distributed forcing ======
 elseif OPT_Forcing == 3
-% % load datasets
-% RunBC = 1; % To run bias-correction of the on-the-fly downscaled grids - need this as an option 1/0 () = no bias correction only downscaling_
-% dsERA = load(ERAdataFile);
-% dsGRID = load(GRIDdataFile);
-% load(BCcoeffFile)
-% 
-% dim = 'grid';
-% n = 1500;
-% demCurv = getcurvature(dsGRID.demZs,n);
-% 
-% dsGRID.pixelSize = abs(dsGRID.demLats(1,1)-dsGRID.demLats(2,1))*111.1e3; % (m)
-% [dsGRID.demSlope,dsGRID.demAspect] = slopeaspect(dsGRID.demZs,dsGRID.pixelSize);
-% 
-% % Precipitation gradient + Mean Annual Precipitation
-% dsERA.tpLr = 0.003; % Precipitation gradient (mm yr-1 m-1)
-% nYrs = years(DateRange(end)+(hours(1)) - DateRange(1));
-% dsERA.tpMean = nansum(dsERA.tp,3)/nYrs;
-% 
-% % Set output grids to be the dem grid resolutions (default are provided
-% % bias-correction locations if not)
-% dsGRID.dsLats = dsGRID.demLats; dsGRID.dsLons = dsGRID.demLons; dsGRID.dsZs = dsGRID.demZs;
-%  
-% %Load ERA data
-% %Load bias correction coefficents
-
-
-
+    %Load data
+    OPT_Run_BC = CONFIG_vals.OPT_RunBC;
+    dsERA = load([meteo_name '_ERAdata.mat']);
+    dsGRID = load([meteo_name '_GRIDdata.mat']);
+    dsCoeff = load([meteo_name '_BC_Coefficients.mat']);
+    dim = 'grid';
+    n = 1500;
+    demCurv = getcurvature(dsGRID.demZs,n);
+    dsGRID.pixelSize = abs(dsGRID.demLats(1,1)-dsGRID.demLats(2,1))*111.1e3; % (m)
+    [dsGRID.demSlope,dsGRID.demAspect] = slopeaspect(dsGRID.demZs,dsGRID.pixelSize);
+    % Precipitation gradient + Mean Annual Precipitation
+    dsERA.tpLr = 0.003; % Precipitation gradient (mm yr-1 m-1) - CAREFUL - should this be a param?
+    nYrs = years(Date(end)+(hours(1)) - Date(1));
+    dsERA.tpMean = nansum(dsERA.tp,3)/nYrs;
+    % Set output grids to be the dem grid resolutions (default are provided
+    % bias-correction locations if not)
+    dsGRID.dsLats = dsGRID.demLats; dsGRID.dsLons = dsGRID.demLons; dsGRID.dsZs = dsGRID.demZs;
 end
 
 % Solar variables (just for Lmax_day)
@@ -1086,27 +1073,6 @@ for t=fts:N_time_step
     %% Swapping other grids
     Afirnn = reshape(Afirn,num_cell,1);
     SOIL_THn = reshape(SOIL_TH,num_cell,1);
-% 
-%     check_var(forcing, ...
-%     ["t2m" ... % Temperature
-%     "d2m" ...  % Dew Point temperature
-%     "tp" ...   % Precipitation
-%     "ssrd" ... % Downward short wave radiation
-%     "strd" ... % Downdward Long wave radiation
-%     "ws10" ... % Wind speed
-%     "sp" ...   % Air pressure
-%     "es" ...   % saturation vapor pressure
-%     "ea" ...   % actual vapor pressure
-%     "RH" ...   % Relative humidity
-%     "SAD1" ... % SAD1
-%     "SAD2" ... % SAD2
-%     "SAB1" ... % SAB1
-%     "SAB2" ... % SAB2
-%     "PARB" ... % PARB
-%     "PARD" ... % PARD
-%     "N" ...    % Cloudiness
-%     ],Point)
-%     %}
     
     %% SPATIAL INITIALIZATION VECTOR PREDEFINING
     %======================================================================
