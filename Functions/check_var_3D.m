@@ -145,7 +145,7 @@ mistakes{z,1} = "Error: Dew Point Temperature seems to not be in celsius degrees
 z =z+1; 
 end
 
-if any(Tdew > Ta, "all")
+if any(Tdew > Ta + 0.0001, "all") %Note adding small numerical tolerance
 mistakes{z,1} = "Error: Some values of Dew Point Temperature are higher than Air Temperature. Check.";
 z =z+1; 
 end

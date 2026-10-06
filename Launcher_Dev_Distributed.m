@@ -4,21 +4,11 @@
 
 %% AUTHOR INFO AND STUDY SITE
 %==========================================================================
-% Updated 15/09/2026 to makeinto Development version for Mountain Water
+% Updated 15/09/2026 to make into Development version for Mountain Water
 % Author: Cat Fyffe
-% Code originally from: Max Rodriguez and ACHILLE JOUBERTON
-% Area of Study: Rio Santa
-% Region: Shallap
+% Code originally from: Max Rodriguez and Achille Jouberton
 % Code explanation: This code launches TC model.
 %==========================================================================
-
-%% THINGS TO CHECK/WATCH LATER
-
-%UPDATE PARAMS WITH SIMONES
-%Initial albedo map
-%rho_g
-%Soil paramters issues Max mentioned
-%CHECK times as starts Date-1 but saves against Date?
 
 %% CLEAR ALL
 clc; clear;
@@ -32,7 +22,7 @@ clc; clear;
 site_num_list = [1 2 3]; %Please number sequentially
 site_name_list = {'Shallap' 'Torre_Orsina' 'Hybas_Lvl7_Catchment_2070497830'};
 num_sites = size(site_num_list,2);
-site_num = 2; %Choose site to run, this then selects the correct site directories
+site_num = 1; %Choose site to run, this then selects the correct site directories
 site_name = site_name_list{site_num};
 
 %===================================================
@@ -228,8 +218,6 @@ TT_par = readtable(Directories.Vegpar, opts);
 VEG_CODE(isnan(VEG_CODE))=0; %If any NaNs replace with 0
 ksv=reshape(VEG_CODE,num_cell,1);
 
-%Note Torre Orisina misses landcover 8 in VEG_CODE, may need to adjust
-
 %% Veg/land parameters (was POI but renamed to reduce confusion with Points
 %of interest)
 %Load table (needed for both options)
@@ -369,11 +357,6 @@ OPT_Aval = OPT_PARAM_vals.OPT_Aval; % 1 to turn on avalanching, 0 to turn off av
 a_aval = OPT_PARAM_vals.a_aval; %avalanche parameters a (Bernhart & Schulz 2010) - from TOPKAPI 0.17245 - 0.12/145 from Jouberton et al.(2025) - 99.05/0.1012 from Buri et al. (2023)
 C_aval = OPT_PARAM_vals.C_aval; % avalanche parameters C 
 
-% Initial snow depth and albedo
-%diff_IniSND = 1; %NOT USED
-%fn_IniSnowDepth = SNOWD; %NOT USED!! - SNOWD used directly in initial conditions
-%fn_IniSnowAlbedo = 'Cinca_Init_Snow_Albedo_virtual.mat'; %TO CREATE
-
 % Precipitation phase partitioning
 %1 = 2-threshold, 2 = Ding 2017, 3 = single-threshold, 4 = Pomeroy 2013, 5
 %= Wang 2019, 6 = Jennings 2018
@@ -439,7 +422,7 @@ end
 % 4. Carbon
 %-------------------------------------------------------------------------
 
-load(['Ca_Data.mat']);
+load('Ca_Data.mat');
 d1 = find(abs(Date_CO2-datenum(Date(1)))<1/36);d2 = find(abs(Date_CO2-datenum(Date(end)))<1/36);
 Ca=Ca(d1:d2);
 clear d1 d2 Date_CO2 id_df
@@ -453,7 +436,6 @@ clear a0 gam1 pow0 k2 DTii
 % 5. Topography and channel params
 %-----------------------------------------------------------------------
 
-% MASK=ones(m_cell,n_cell); MASK(isnan(DTM))=0;
 MASKn=reshape(MASK,num_cell,1);
 DTMn = reshape(DTM,num_cell,1);
 Kinde = find(MASK==1);
@@ -477,7 +459,7 @@ Ared=ones(num_cell,1);
 % *** 
 Xout = Xoutlet; % Location of outlet discharge (column)
 Yout = Youtlet; % Location of outlet discharge (this is the row)
-NAMEout = POI_names(1); %CHECK this
+NAMEout = [site_name '_Outlet'];
 
 Slo_top(Youtlet,Xoutlet)=0.05; %NOTE on maps and in scatter use (X,Y) but to index use Y (row) X (col)
 npoint = length(Xout);
@@ -532,7 +514,7 @@ else %PORG brought in as %
 end
 
 % WHAT IS THIS?
-Zs_OUT=800*ones(num_cell,1);
+%Zs_OUT=800*ones(num_cell,1);
 
 %  ---  Set Soil thickness and related params ---
 OPT_soil_th = OPT_PARAM_vals.OPT_soil_th;
@@ -638,25 +620,19 @@ if OPT_Aval == 0; disp('Avalanching: off'); else; disp('Avalanching: on'); end
 if OPT_Forcing == 1
 Meteo_data = load(Directories.forc_meteo,meteo_name);
 Meteo_data = Meteo_data.(meteo_name);
-%** site specific
-idForc = isbetween(Meteo_data.DateTime,Meteo_data.DateTime(1),"2024-09-30 23:00"); %This is to prevent Pr issues where NaNs
-%**
-Forcing_Date = Meteo_data.DateTime(idForc);
-Ta = Meteo_data.Ta(idForc); %Air temperature, degrees C
-U = Meteo_data.RH(idForc); %Relative humidity, %
-Ws = Meteo_data.u(idForc); %Wind speed, ms-1
-Pr = Meteo_data.Pr_CorRH(idForc); %Precipitation, mm -  with undercatch and RH correction
-SWin = Meteo_data.SWinCor(idForc); %Incoming shortwave, Wm-2  SWinCor with correction for maxSWin using 20260202
-SWout = Meteo_data.SWout(idForc); %Outgoing shortwave, Wm-2
-Nin = Meteo_data.LWin(idForc); %Incoming longwave, Wm-2
-LWout = Meteo_data.LWout(idForc); %Outgoing longwave, Wm-2
+Forcing_Date = Meteo_data.DateTime;
+Ta = Meteo_data.Ta; %Air temperature, degrees C
+U = Meteo_data.RH; %Relative humidity, %
+Ws = Meteo_data.WS; %Wind speed, ms-1
+Pr = Meteo_data.Pr; %Precipitation, mm 
+SWin = Meteo_data.SWin; %Incoming shortwave, Wm-2  
+SWout = Meteo_data.SWout; %Outgoing shortwave, Wm-2
+Nin = Meteo_data.LWin; %Incoming longwave, Wm-2
+LWout = Meteo_data.LWout; %Outgoing longwave, Wm-2
 
 %Lapse rates
 hm_Ta_lapse = load(ta_lapse_file); %These are the Ta lapse rates from TOPKAPI, per hour and month for main station 144, catchment 406
-hm_Ta_lapse = hm_Ta_lapse.(ta_lapse_name); %Pull out of structure
-%** site specific
-hm_Ta_lapse.Properties.VariableNames{5}='Ta_lapse'; 
-%**
+hm_Ta_lapse = hm_Ta_lapse.(ta_lapse_name); %Pull out of structure. The lapse rate column should be named 'Ta_lapse'
 Ldown_lapse = -0.031; %from Marty et al. (2002) p145
 %Pr lapse - based on ratio per month
 Pr_lapse = load(pr_lapse_file);
@@ -853,6 +829,8 @@ for t=fts:N_time_step
             else 
                 PARB_S(tinm,:) =0;
             end
+            %Prevent negative values
+            SAB1_S(SAB1_S<0)=0; SAB2_S(SAB2_S<0)=0; PARB_S(PARB_S<0)=0; 
         end %Going over time steps within month
     
         %Air pressure (calculated directly from elevation)
@@ -950,13 +928,35 @@ for t=fts:N_time_step
     idTa = Ta_S>0;  %Apply when >0
     idapply = idTa & idcli_r; %So where Temp threshold exceeded and over clean ice
     Ta_S(idapply) = Ta_S(idapply) - TmodB; %Only remove bias
+    Tdew_S(idapply) = TdewS(idapply) - TmodB; %Also apply to Tdew
+
+    %Use the corrected tempratures to derive relative humidity
+    c=237.3; b=17.27;
+    U_S = 100*exp((c*b.*(Tdew_S - Ta_S))./((c+Ta_S).*(c+Tdew_S)));
+    clear c b 
+    if max(max(U_S))>=1
+    U_S = U_S./100; %Turn into fraction
+    U_S(U_S>1) = 1; %Cannot be more than 100%
+    end
+
     elseif OPT_Tmod ==2
     idcli = GLHn>0 & DEB_MAPn == 0; %Clean ice only
     idcli_r = repmat(idcli',size_time_in_month,1);
     Ta_S(idcli_r) = Ta_S(idcli_r) - TmodB; %So remove bias first (over clean ice)
+    Tdew_S(idcli_r) = Tdew_S(idcli_r) - TmodB; %Also apply to Tdew
     idTa = Ta_S>0;  %Apply multiplier when >0
     idapply = idTa & idcli_r; %So where Temp threshold exceeded and over clean ice
     Ta_S(idapply) = Ta_S(idapply).*TmodM; %Apply Tmod multiplier
+    Tdew_S(idapply) = Tdew_S(idapply).*TmodM; %Apply Tmod multiplier
+
+    %Use the corrected tempratures to derive relative humidity
+    c=237.3; b=17.27;
+    U_S = 100*exp((c*b.*(Tdew_S - Ta_S))./((c+Ta_S).*(c+Tdew_S)));
+    clear c b 
+    if max(max(U_S))>=1
+    U_S = U_S./100; %Turn into fraction
+    U_S(U_S>1) = 1; %Cannot be more than 100%
+    end
     end
 
     % Vapor pressure - calculate based on distributed Ta and U
@@ -974,8 +974,8 @@ for t=fts:N_time_step
     %We only check inside the mask in case there are NaNs outside.
     check_var_3D(Ta_S(:,MASKn==1),Tdew_S(:,MASKn==1),Pr_S(:,MASKn==1),N_S(:,MASKn==1),Ws_S(:,MASKn==1),Pre_S(:,MASKn==1),esat_S(:,MASKn==1),ea_S(:,MASKn==1),U_S(:,MASKn==1),SAD1_S(:,MASKn==1),SAD2_S(:,MASKn==1),SAB1_S(:,MASKn==1),SAB2_S(:,MASKn==1),PARB_S(:,MASKn==1),PARD_S(:,MASKn==1));
     
-%     % Store year and month loaded
-%     %----------------------------------------------------------------------
+%   % Store year and month loaded
+%   %----------------------------------------------------------------------
     year_loaded = str2num(yy);
     month_loaded = str2num(mth);
 % 
@@ -1382,25 +1382,16 @@ for t=fts:N_time_step
         % ij is the index to go pixel by pixel through the mask
         % ij=1:num_cell
         %disp(strcat('in the loop', ij))
-        
+   
         %% Debugging for a for loop
-        %Follow(ij) = 2222; %22307 - 22308 (row 107 - col 151)
 %         if ij == 3211 
 %             disp('wait') %261 first 6 cell
 %         end
-        %disp('bye')
-        %{
-        if ismember(ij, [num_cell/8, num_cell/4, num_cell/2, 3*num_cell/4])   
-        disp(ij)
-        end        
-        %Ta,Ts,Pre,zatm,disp_h,zom,zoh,Ws,ea
-        %} 
         % =================================================================
         
         if MASKn(ij)== 1
             %disp(['Cell: ' char(num2str(ij)) ', Veg Type: ' char(num2str(ksv(ij)))])
             Elev=DTMn(ij);
-            %[i,j] = ind2sub([m_cell,n_cell],ij);
 
             % BOUNDARY CONDITION  
             % INTRODUCED SOIL AND VEG. for ij
@@ -1420,6 +1411,9 @@ for t=fts:N_time_step
 
             %Extract C values directly from grids
             Ccrown = VPAR.Ccrownr(ij);
+            if iscell(Ccrown)==1
+                Ccrown = Ccrown{:};
+            end
             Cbare = VPAR.Cbarer(ij); 
             Crock = VPAR.Crockr(ij); 
             Curb = VPAR.Curbr(ij); 
@@ -1474,7 +1468,7 @@ for t=fts:N_time_step
         SupP_L(ij,:),         SupK_L(ij,:),       ISOIL_L(ij,:,:),      BA_H(ij,:),          Tden_H(ij,:), ...
         AgePl_H(ij,:),        BA_L(ij,:),         Tden_L(ij,:),         AgePl_L(ij,:),       Ccrown_t(ij,:)]= ...
                           VEGETATION_MODULE_PAR( ...
-        cc_max,               Ccrown{:},              ZR95_H,              ZR95_L,              B_Htm1(ij,:,:),...
+        cc_max,               Ccrown,              ZR95_H,              ZR95_L,              B_Htm1(ij,:,:),...
         PHE_S_Htm1(ij,:),     dflo_Htm1(ij,:),     AgeL_Htm1(ij,:),     AgeDL_Htm1(ij,:),    Ta_t(ij,:), ...
         PAR_t(ij,:),          Tdp_H_t(ij,:,:),     Psi_x_H_t(ij,:,:),   Psi_l_H_t(ij,:,:),   An_H_t(ij,:,:), ...
         Rdark_H_t(ij,:,:),    NPP_Htm1(ij,:),      jDay,                Datam_S,             NPPI_Htm1(ij,:), ...
@@ -1495,73 +1489,13 @@ for t=fts:N_time_step
         L_day,                Se_bio,              Tdp_bio,             OPT_EnvLimitGrowth,  OPT_VD, ...
         OPT_VCA,              OPT_ALLOME,          OPT_SoilBiogeochemistry);
     
-                BLit(ij,:)= 0.0 ; % %% %%[kg DM / m2]
+            BLit(ij,:)= 0.0 ; % %% %%[kg DM / m2] - unsure what this is?
             end        
 
             %% HYDROLOGY MODULE
             %==============================================================
             % FUNTION: HYDROLOGY_MODULE_PAR
             %==============================================================                                                 
-    %try
- %{   
-mm = {Vtm1,        Oicetm1,       aR,           Zs,                  EvL_Zs,        ...
-     Inf_Zs, ...
-     Zinf,         RfH_Zs,        RfL_Zs,       dz,                  Dz, ...
-     ms,           Kbot,          Pr_S,         Ta_S,                Ds_S, ...
-     Ws_S,         zatm,          Tstm1,        dt,                  dth, ...
-     ea_S,         N_S,           Pre_S,        Tstm0,               LAI_H, ...
-     SAI_H,        LAI_L,         SAI_L,        LAIdead_H,           LAIdead_L,...
-     Rrootl_H,     Rrootl_L,      BLit,         Sllit,               Kct,...
-     Datam_S,      IniCond.DeltaGMT,      Lon,          Lat,                 t_bef, ...
-     t_aft,        Ccrown,        Cbare,        Crock,               Curb, ...
-     Cwat,         SAB1_S,        SAB2_S,       SAD1_S,              SAD2_S, ...
-     PARB_S,       PARD_S,        SvF,          SNDtm1,              snow_albedotm1, ...
-     Color_Class,  OM_H,          OM_L,         PFT_opt_H,           PFT_opt_L, ...
-     hc_H,         hc_L,          d_leaf_H,     d_leaf_L,            Soil_Param, ...
-     Interc_Param, SnowIce_Param, VegH_Param,   VegL_Param,          Ca_S, ...
-     Oa,           Citm1_sunH,    Citm1_shdH,   Citm1_sunL,          Citm1_shdL,...
-     e_rel_H,      e_relN_H,      e_rel_L,      e_relN_L,            e_snotm1, ...
-     In_Htm1,      In_Ltm1,       In_Littertm1, In_urbtm1,           In_rocktm1(ij), ...
-     SWEtm1,       In_SWEtm1,     Tdebtm1,      Ticetm1,             Tdptm1(ij,:), ...
-     Tdp_snowtm1,  Tdamptm1,      Ts_undertm1,  WATtm1,              ICEtm1(ij), ...
-     IP_wctm1,     ICE_Dtm1,      Cicewtm1,     Vx_Htm1,             Vl_Htm1(ij,:), ...
-     Vx_Ltm1,      Vl_Ltm1,       Psi_x_Htm1,   Psi_l_Htm1,          Psi_x_Ltm1(ij,:), ...
-     Psi_l_Ltm1,   ZR95_H,        ZR95_L,       FROCKtm1,            Krock,...
-     Urb_Par, ...
-     Deb_Par,      Zs_deb,        Tdew_S,       t_slstm1,            rostm1, ...
-     SP_wctm1,     fpr,           IrD_S,        In_max_urb,          In_max_rock, ...
-     K_usle,       tau_snotm1,    Ta_day,       Slo_top2,            Slo_head, ...
-     Asur,         Ared,          aTop,         EKtm1,               q_runon, ...
-     Qi_in,        Ws_undertm1,   Pr_sno_t,     pow_dis,             a_dis, ...
-     Salt_S,       SPAR,SNn,      min_SPD,  OPT_VegSnow,         OPT_SoilTemp, ...
-     OPT_PlantHydr,Opt_CR,        Opt_ST,       Opt_ST2,             OPT_SM, ...
-     OPT_STh,      OPT_FR_SOIL,   OPT_PH,       parameterize_phase,  hSTL, ...
-     OPT_Albsno};
-
-sizes = cellfun(@size, mm, 'UniformOutput', false);
-stringCell = cellfun(@(x) sprintf('[%.0f,%.0f]', x(1), x(2)), sizes, 'UniformOutput', false);
-
-T = table('Size', [31,5], ...
-    'VariableTypes', {'string', 'string', 'string', 'string', 'string'});
-
-%i = 5;
-z = 1;
-y = 1;
-        for i = 1:length(sizes)
-        T(z,y) = stringCell(i);
-        y = y+1;
-            if mod(i, 5) == 0ij
-            z = z+1;
-            y=1;
-            end
-        
-        end
- 
-    if t == 2    
-    writetable(T, [Directories.save ' output_data.csv']);
-    end
-    
- %}
 
     [V(ij,:),           O(ij,:),          Vice(ij,:),       Oice(ij,:),          ZWT(ij), ...         % 1
      OF(ij),            OS(ij),           OH(ij,:),         OL(ij,:),            Psi_s_H(ij,:),...    % 2
@@ -1601,7 +1535,7 @@ y = 1;
      LAI_H(ij,:),           SAI_H(ij,:),         LAI_L(ij,:),      SAI_L(ij,:),         LAIdead_H(ij,:), ...
      LAIdead_L(ij,:),       Rrootl_H(ij,:),      Rrootl_L(ij,:),   BLit(ij,:),          Sllit,   ...
      Kct,                   Datam_S,             IniCond.DeltaGMT, Lon,                 Lat,     ...
-     t_bef,                 t_aft,               Ccrown{:},        Cbare,               Crock,  ...
+     t_bef,                 t_aft,               Ccrown,        Cbare,               Crock,  ...
      Curb,                  Cwat,                SAB1_St(ij),      SAB2_St(ij),         SAD1_St(ij), ...
      SAD2_St(ij),           PARB_St(ij),         PARD_St(ij),      SvFn(ij),            SNDtm1(ij),  ...
      snow_albedotm1(ij,:),  Color_Class,         OM_H,             OM_L,                PFT_opt_H,     ...
