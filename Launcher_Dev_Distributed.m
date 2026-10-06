@@ -32,7 +32,7 @@ clc; clear;
 site_num_list = [1 2 3]; %Please number sequentially
 site_name_list = {'Shallap' 'Torre_Orsina' 'Hybas_Lvl7_Catchment_2070497830'};
 num_sites = size(site_num_list,2);
-site_num = 3; %Choose site to run, this then selects the correct site directories
+site_num = 2; %Choose site to run, this then selects the correct site directories
 site_name = site_name_list{site_num};
 
 %===================================================
@@ -773,7 +773,7 @@ for t=fts:N_time_step
 
     disp(['New forcing loaded for period: ' char(num2str(yy)) '-' char(num2str(mth)) ])    
 
-    %  ===== So for weather station point =========
+    %  ===== For weather station point =========
     if OPT_Forcing == 1
     % Pull out meteo data for the month for each variable  (before spatial distribution)
     id_date_for_month = ismember(Forcing_Date,date_forMonth); %So this is the index of the forcing data for this month
@@ -822,11 +822,11 @@ for t=fts:N_time_step
         PARB_S = NaN(size_time_in_month,num_cell);
         Pr_ratio = NaN(size_time_in_month,num_cell);
     
-        for tinm = 1:size_time_in_month %So run over each hour
+        for tinm = 1:size_time_in_month % run over each hour
             m_temp = month(date_forMonth(tinm));
             h_temp = hour(date_forMonth(tinm));
             mh_id = hm_Ta_lapse.hour==h_temp & hm_Ta_lapse.month==m_temp;
-            Ta_lapse = -hm_Ta_lapse.Ta_lapse(mh_id); %So this is the lapse rate per hour and month - note converting to negative rate
+            Ta_lapse = -hm_Ta_lapse.Ta_lapse(mh_id); % the lapse rate per hour and month - note converting to negative rate
             Tdew_lapse = Ta_lapse; %Its ok to use the same lapse rate
             %Air temperature, degrees C
             Ta_S(tinm,:) = Ta_P(tinm) + (Ta_lapse.*(DTMn-Meteo_el)); %Lapse rates should be negative
@@ -920,7 +920,7 @@ for t=fts:N_time_step
         Pre_S = double(Forc_S_dc_r.sp(id_date_for_month,:)); %Surface pressure
         Ws_S = double(Forc_S_dc_r.ws10(id_date_for_month,:)); %Wind speed, ms-1
         SAB1_S = double(Forc_S_dc_r.SAB1(id_date_for_month,:)); %First band direct radiation, Wm^-2
-        SAB2_S = double(Forc_S_dc_r.SAB2(id_date_for_month,:)); %Decond band direct radiation, Wm^-2
+        SAB2_S = double(Forc_S_dc_r.SAB2(id_date_for_month,:)); %Second band direct radiation, Wm^-2
         SAD1_S = double(Forc_S_dc_r.SAD1(id_date_for_month,:)); %First band diffuse radiation, Wm^-2
         SAD2_S = double(Forc_S_dc_r.SAD2(id_date_for_month,:)); %Second band diffuse radiation, Wm^-2
         PARB_S = double(Forc_S_dc_r.PARB(id_date_for_month,:)); %PAR radiation direct, Wm^-2
@@ -1385,6 +1385,9 @@ for t=fts:N_time_step
         
         %% Debugging for a for loop
         %Follow(ij) = 2222; %22307 - 22308 (row 107 - col 151)
+%         if ij == 3211 
+%             disp('wait') %261 first 6 cell
+%         end
         %disp('bye')
         %{
         if ismember(ij, [num_cell/8, num_cell/4, num_cell/2, 3*num_cell/4])   
@@ -1471,7 +1474,7 @@ for t=fts:N_time_step
         SupP_L(ij,:),         SupK_L(ij,:),       ISOIL_L(ij,:,:),      BA_H(ij,:),          Tden_H(ij,:), ...
         AgePl_H(ij,:),        BA_L(ij,:),         Tden_L(ij,:),         AgePl_L(ij,:),       Ccrown_t(ij,:)]= ...
                           VEGETATION_MODULE_PAR( ...
-        cc_max,               Ccrown,              ZR95_H,              ZR95_L,              B_Htm1(ij,:,:),...
+        cc_max,               Ccrown{:},              ZR95_H,              ZR95_L,              B_Htm1(ij,:,:),...
         PHE_S_Htm1(ij,:),     dflo_Htm1(ij,:),     AgeL_Htm1(ij,:),     AgeDL_Htm1(ij,:),    Ta_t(ij,:), ...
         PAR_t(ij,:),          Tdp_H_t(ij,:,:),     Psi_x_H_t(ij,:,:),   Psi_l_H_t(ij,:,:),   An_H_t(ij,:,:), ...
         Rdark_H_t(ij,:,:),    NPP_Htm1(ij,:),      jDay,                Datam_S,             NPPI_Htm1(ij,:), ...

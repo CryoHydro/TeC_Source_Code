@@ -75,7 +75,7 @@ if not(cc==cc_max)
     Psi_x_Ltm1=Psi_x_Ltm1(1:cc);
     Psi_l_Ltm1=Psi_l_Ltm1(1:cc);
     BLit=BLit(1:cc);
-    In_Littertm1= In_Littertm1(1:cc);
+    In_Littertm1= In_Littertm1(1);
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 snow_albtm1.dir_vis = snow_albedotm1(1);
@@ -158,7 +158,7 @@ if not(cc==cc_max)
     In_L(cc+1:cc_max) = 0;
     Tdp_H(cc+1:cc_max) = 0;
     Tdp_L(cc+1:cc_max) = 0;
-    %r_litter(cc+1:cc_max)=0;
+    r_litter(cc+1:cc_max)=0;
     Psi_s_H(cc+1:cc_max) = 0;
     Psi_s_L(cc+1:cc_max) = 0;
     gsr_H(cc+1:cc_max) = 0;
@@ -183,6 +183,8 @@ if not(cc==cc_max)
     fapar_L(cc+1:cc_max) = 0;
     SIF_H(cc+1:cc_max) = 0;
     SIF_L(cc+1:cc_max) = 0;
+    Dr_H(cc+1:cc_max) = 0;
+    Dr_L(cc+1:cc_max) = 0;
 end
 %%%%
 if Crock ==1 || Curb ==1 || Cwat ==1
