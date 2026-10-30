@@ -19,10 +19,10 @@ clc; clear;
 %% SITE SETUP
 %==========================================================================
 
-site_num_list = [1 2 3]; %Please number sequentially
-site_name_list = {'Shallap' 'Torre_Orsina' 'Hybas_Lvl7_Catchment_2070497830'};
+site_num_list = [1 2 3 4]; %Please number sequentially
+site_name_list = {'Shallap' 'Torre_Orsina' 'Hybas_Lvl7_Catchment_2070497830','Kyzylsu'};
 num_sites = size(site_num_list,2);
-site_num = 1; %Choose site to run, this then selects the correct site directories
+site_num = 4; %Choose site to run, this then selects the correct site directories
 site_name = site_name_list{site_num};
 
 %===================================================
@@ -56,7 +56,7 @@ OPT_Veg_Param = CONFIG_vals.OPT_Veg_Param; %Choose if vegetation parameters (for
 %==========================================================================
 
 % Sub-path for outputs
-Directories.save = ['Outputs/Distributed/' IniCond.run_folder '/']; %Do we make this site specific?
+Directories.save = [site_name '/Outputs/Distributed/' IniCond.run_folder '/']; %Do we make this site specific?
 Directories.restart = Directories.save;
 
 % Sub-path for forcings
@@ -318,6 +318,17 @@ for z = 1:No_vpar
     end
 end
 
+% Crown fractions as a numeric matrix [num_cell x cc_max] for the outputs
+% (with OPT_Veg_Param = 1, VPAR.Ccrownr is a cell array of crown vectors)
+if iscell(VPAR.Ccrownr)
+    Ccrown_OUTv = zeros(num_cell,cc_max);
+    for i = 1:num_cell
+        Ccrown_OUTv(i,1:numel(VPAR.Ccrownr{i})) = VPAR.Ccrownr{i};
+    end
+else
+    Ccrown_OUTv = VPAR.Ccrownr;
+end
+
 % SPATIAL INDICES PER LAND COVER CLASS
 for v=1:No_vpar
     fieldName = ['Veg', num2str(v)];
@@ -409,8 +420,12 @@ else
     disp(strcat('Constant bare-ice albedo of',{' '},num2str(Aice),{' '},'used'))
 end
 
-% Check if initial snow albedo is given - 
-% this goes into initial conditions as SNOWALB
+% Check if initial snow depth is given, if not assign it to 0
+if ~exist('SNOWD','var')
+    SNOWD = DTM.*0;
+end 
+
+% Check if initial snow albedo is given - this goes into initial conditions as SNOWALB
 %SNOWD is taken directly and used in intial conditions as initial snow depth
 if ~exist('SNOWALB','var')
     Ini_Asnow = OPT_PARAM_vals.Ini_Asnow;
@@ -1374,10 +1389,10 @@ for t=fts:N_time_step
     %======================================================================
     % LOOP OVER CELLS
     %======================================================================
-    P = (Xout - 1) * 133 + Yout;
+    %P = (Xout - 1) * 133 + Yout; AJ: What's this? To remove?
 
     %Follow=MASK; %Debugging
-   for ij= 1:num_cell % this is a parfor
+   parfor ij= 1:num_cell % this is a parfor
         % Good practice to use a simple for loop for debugging/testing
         % ij is the index to go pixel by pixel through the mask
         % ij=1:num_cell
@@ -1396,7 +1411,7 @@ for t=fts:N_time_step
             % BOUNDARY CONDITION  
             % INTRODUCED SOIL AND VEG. for ij
             %--------------------------------------------------------------
-            [aR,             Zs,             EvL_Zs,       Inf_Zs,     Bio_Zs,      Zinf, ...
+            [aR,                             EvL_Zs,       Inf_Zs,     Bio_Zs,      Zinf, ...
              RfH_Zs,         RfL_Zs,         dz,           Ks_Zs,      Dz,          ms, ...
              Kbot,           Krock,          zatm,         Color_Class,  OM_H,       OM_L,        PFT_opt_H, ...
              PFT_opt_L,      d_leaf_H,       d_leaf_L,     SPAR,       Phy,         Soil_Param, ...
@@ -1740,16 +1755,16 @@ end
        
     %% ALBEDO MAP
 
-    if t==2 
-        snow_albedo_out = snow_albedotm1;
-        surface_albedo_out = surface_albedotm1;
-    elseif Datam_S(4)==12
-    snow_albedo_out = snow_albedo;
-    surface_albedo_out = surface_albedotm1;
-    surface_albedo_out(ICE_D>0)=0.28; %THESE ARE NOT CORRECT?
-    surface_albedo_out(DEB_MAP>0)=0.13; %THESE ARE NOT CORRECT?
-    surface_albedo_out(SND>0)=snow_albedo(SND>0);
-    end
+    % if t==2 
+    %     snow_albedo_out = snow_albedotm1;
+    %     surface_albedo_out = surface_albedotm1;
+    % elseif Datam_S(4)==12
+    % snow_albedo_out = snow_albedo;
+    % surface_albedo_out = surface_albedotm1;
+    % surface_albedo_out(ICE_D>0)=0.28; %THESE ARE NOT CORRECT?
+    % surface_albedo_out(DEB_MAP>0)=0.13; %THESE ARE NOT CORRECT?
+    % surface_albedo_out(SND>0)=snow_albedo(SND>0);
+    % end
 
 %% INITIAL CONDITION FOR THE NEXT STEP
 %==========================================================================
@@ -1934,7 +1949,8 @@ end
 %     max_len = max(cellfun(@numel, VPARc.Ccrowns)); %So this is the number of crown values per land cover
 %     padded_cells = cellfun(@(v) [v, zeros(1, max_len - numel(v))], VPARc.Ccrowns, 'UniformOutput', false);
 %     Ccrown_OUT = cell2mat(padded_cells);
-%     
+%     Ccrown_OUTv = Ccrown_OUT(ksv, :); From Max's script
+
 %     %I don't know if this is right!! PLEASE CHECK
 %     Ccrown_OUTv=zeros(num_cell,1);
 %     for c=1:size(Ccrown_OUT,1)
@@ -1943,8 +1959,8 @@ end
 %     end
     %EVcode     = VPAR.Class;
 
-    %Can directly use Ccrown vector of the grid
-    Ccrown_OUTv = VPAR.Ccrownr; 
+    %Can directly use Ccrown vector of the grid 
+    %Ccrown_OUTv = VPAR.Ccrownr; %[doesn't work for OPT_Veg_Param = 1]
   
     % Assignation to temporal matrix
     %----------------------------------------------------------------------
@@ -2053,59 +2069,40 @@ end
 
     %NOTE VEG DATA NOT CORRECTED FOR CCROWN
 
-    % Here pull out from the grids the hourly variables from points, add
-    % Date info into table
-    %This needs to match the list in Timestep_T!
-     if t==fts %Only run on first time step or it will over-write
-        vars_to_keep = {'EICE','ESN','SND','SWE','Ta_St','Ws_St','U_St','N_St','ea_St','Rn',...
-        'SAD1_St','SAD2_St','SAB1_St','SAB2_St','Pre_St','Pr_St','Pr_sno','Pr_liq', 'snow_albedo','Smelt','Imelt', ...
-        'ICE','ICE_D','QE', 'ros', 'NDVI', 'T_H', 'T_L', 'O', 'FROCK', ...
-        'LAI_H', 'LAI_L', 'NPP_H', 'NPP_L','Csno','An_L','An_H',...
+    % Variables saved at the points (same order as in Timestep_T). Each keeps
+    % its own number of columns (e.g. O and Tdp have ms_max columns)
+    vars_to_keep = {'EICE','ESN','SND','SWE','Ta_St','Ws_St','U_St','N_St','ea_St','Rn',...
+        'SAD1_St','SAD2_St','SAB1_St','SAB2_St','Pre_St','Pr_St','Pr_sno','Pr_liq','snow_albedo','Smelt','Imelt', ...
+        'ICE','ICE_D','QE','ros','NDVI','T_H','T_L','O','FROCK', ...
+        'LAI_H','LAI_L','NPP_H','NPP_L','Csno','An_L','An_H',...
         'EG','EIn_L','EIn_H','EIn_rock','H','HV','G','In_L','In_H','In_SWE','In_rock',...
         'OF','OH','OL','OS','PHE_S_L','PHE_S_H','Qfm','Qv','RA_L','RA_H','Rg_L','Rg_H','Rh','SAI_L','SAI_H',...
         'Tdp','Tdp_L','Tdp_H','Ts','ZWT','dQ_S','dQVEG','IP_wc'};
-        num_vk = size(vars_to_keep,2);
-        run_len = size(Date,2);
-        num_pts = size(Points,1);
-    
-        %Due to snow_albedo and O need to work harder to make the table blank
-        BC = zeros(run_len,1);
-        BC_sa = [BC BC BC BC];
-        BC_O = [BC BC BC BC BC BC BC BC BC BC]; %Also for Tdp
-        
-        for p=1:num_pts
-            Points_Data(p).Table = table(BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC_sa,...
-                BC,BC,BC,BC,BC,BC,BC,BC,BC,BC_O,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,...
-                BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC,BC_O,BC,BC,BC,BC,BC,BC,BC,'VariableNames',vars_to_keep);
-            Points_Data(p).Table.Date = Date';
-            Points_Data(p).Table = movevars(Points_Data(p).Table,'Date','Before',1);
-        end 
-        %Note you can use te idx from the Points table to get values in the
-        %column variables, or use the ROW and COL value to get the grid values.
-     end
 
-    %Create temp table for this time step of all variables
+    % Values of this time step at the points (one row per point)
     Timestep_T = table(EICE,ESN,SND,SWE,Ta_St,Ws_St,U_St,N_St,ea_St,Rn,...
-    SAD1_St,SAD2_St,SAB1_St,SAB2_St,Pre_St,Pr_St,Pr_sno,Pr_liq, snow_albedo,Smelt,Imelt, ...
-    ICE,ICE_D,QE, ros, NDVI, T_H, T_L, O, FROCK, ...
-    LAI_H, LAI_L, NPP_H, NPP_L,Csno,An_L,An_H,...
-    EG,EIn_L,EIn_H,EIn_rock,H,HV,G,In_L,In_H,In_SWE,In_rock,...
-    OF,OH,OL,OS,PHE_S_L,PHE_S_H,Qfm,Qv,RA_L,RA_H,Rg_L,Rg_H,Rh,SAI_L,SAI_H,...
-    Tdp,Tdp_L,Tdp_H,Ts,ZWT,dQ_S,dQVEG,IP_wc,'VariableNames',vars_to_keep);
+        SAD1_St,SAD2_St,SAB1_St,SAB2_St,Pre_St,Pr_St,Pr_sno,Pr_liq,snow_albedo,Smelt,Imelt, ...
+        ICE,ICE_D,QE,ros,NDVI,T_H,T_L,O,FROCK, ...
+        LAI_H,LAI_L,NPP_H,NPP_L,Csno,An_L,An_H,...
+        EG,EIn_L,EIn_H,EIn_rock,H,HV,G,In_L,In_H,In_SWE,In_rock,...
+        OF,OH,OL,OS,PHE_S_L,PHE_S_H,Qfm,Qv,RA_L,RA_H,Rg_L,Rg_H,Rh,SAI_L,SAI_H,...
+        Tdp,Tdp_L,Tdp_H,Ts,ZWT,dQ_S,dQVEG,IP_wc,'VariableNames',vars_to_keep);
+    Timestep_T_Pts = Timestep_T(Points.idx,:);
 
-    %Extract only the cells necessary
-    Timestep_T_Pts = Timestep_T(Points.idx,:); %Each row here corresponds to a point location
-   
-    for p=1:num_pts
-        for v=1:num_vk
-        tt_col = matches(Timestep_T_Pts.Properties.VariableNames,vars_to_keep(v));
-        pd_col = matches(Points_Data(p).Table.Properties.VariableNames,vars_to_keep(v));
-        Points_Data(p).Table(t-1,pd_col) = Timestep_T_Pts(p,tt_col); %So transfer point data to the correct timestep %Note t-1, so in correct time!
-        end
+    if t==fts % Create the empty point tables, with the column sizes of the first time step
+        num_pts = size(Points,1);
+        Empty_T = Timestep_T_Pts(ones(size(Date,2),1),:);
+        Empty_T{:,:} = 0;
+        Empty_T = addvars(Empty_T,Date','Before',1,'NewVariableNames','Date');
+        Points_Data = struct('Table',repmat({Empty_T},num_pts,1));
+        clear Empty_T
     end
 
-    clear Timestep_T Timestep_T_Pts %Clear these tables as they are remade next timestep
+    for p=1:num_pts
+        Points_Data(p).Table(t-1,vars_to_keep) = Timestep_T_Pts(p,:); %Note t-1, so in correct time!
+    end
 
+    clear Timestep_T Timestep_T_Pts %Remade next timestep
     %Old for output manager
 % %     % Outputs for vegetation
 % %     ANPP_H_spatial(:,:,t_assign)   = reshape(sum(ANPP_H.*Ccrown_OUTv,2),xdim,ydim); 

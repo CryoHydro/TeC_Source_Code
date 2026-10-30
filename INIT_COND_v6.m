@@ -129,7 +129,8 @@ Smelttm1=       0*MASKn; % Snow melt [mm]
 SNDtm1=SNOWD;   SNDtm1(isnan(SNDtm1))=0;  
 SNDtm1=         reshape(SNDtm1,num_cell,1);% Snow depth [m]
 SWEym1=SNDtm1.*rostm1; % Snow water equivalent [mm]
-snow_albedotm1=SNOWALB(:).*ones(num_cell,4);   snow_albedotm1(isnan(snow_albedotm1),:)=0;  % Initial Snow albedo from satellite data [-]
+snow_albedotm1=SNOWALB(:).*ones(num_cell,4);   
+snow_albedotm1(isnan(snow_albedotm1))=0;  % Initial Snow albedo from satellite data [-]
 soil_albedotm1= 0.2*ones(num_cell,4);
 surface_albedotm1=0.2*ones(num_cell,4);
 
