@@ -699,6 +699,7 @@ clear('L_day')
 %=========================================================================
 %% Iterating on time
 %==========================================================================
+
 fts = 2; %First time step
 for t=fts:N_time_step   
     
@@ -1392,7 +1393,8 @@ for t=fts:N_time_step
         if MASKn(ij)== 1
             %disp(['Cell: ' char(num2str(ij)) ', Veg Type: ' char(num2str(ksv(ij)))])
             Elev=DTMn(ij);
-
+            %% 
+            tic
             % BOUNDARY CONDITION  
             % INTRODUCED SOIL AND VEG. for ij
             %--------------------------------------------------------------
@@ -1402,13 +1404,14 @@ for t=fts:N_time_step
              PFT_opt_L,      d_leaf_H,       d_leaf_L,     SPAR,       Phy,         Soil_Param, ...
              Interc_Param,   SnowIce_Param,  VegH_Param,   VegL_Param, fpr,         VegH_Param_Dyn, ...
              VegL_Param_Dyn, Stoich_H,       aSE_H,        Stoich_L,   aSE_L,       fab_H,...
-             fbe_H,          fab_L,          fbe_L,        ZR95_H,     ZR95_L,      In_max_urb,...
-             In_max_rock,    K_usle,         Urb_Par,      Deb_Par,    Zs_deb,      Sllit,...
+             fbe_H,          fab_L,          fbe_L,        ZR95_H,     ZR95_L,      ZRmax_H,      ZRmax_L,...
+             In_max_urb,     In_max_rock,    K_usle,         Urb_Par,      Deb_Par,    Zs_deb,      Sllit,...
              Kct,            ExEM,           ParEx_H,      Mpar_H,     ParEx_L,     Mpar_L] = ....
-                                    PARAMETERS_SOIL_DEV( ...
+                                    PARAMETERS_SOIL_DEV_SHORT_RP( ...
              ksv(ij),        PSANr(ij),       PCLAr(ij),     PORGr(ij),   DEB_MAPn(ij),  md_max,...
              Afirnn(ij),      SOIL_THn(ij),    VPAR,        TT_par,       OPT_PARAM_vals, Zs, ms_max);
-
+            toc
+%% 
             %Extract C values directly from grids
             Ccrown = VPAR.Ccrownr(ij);
             if iscell(Ccrown)==1
