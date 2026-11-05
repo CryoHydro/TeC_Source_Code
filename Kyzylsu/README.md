@@ -67,3 +67,35 @@ in the output stage, because `VPAR.Ccrownr` is a cell array there.
 - **Grass cutting**: the former `Mpar_L.jDay_cut = 180:243; LAI_cut = -0.1` for grass is not available in `PARAMETERS_SOIL_DEV`.
 - **Initial snow**: SNOWD/SNOWALB come from `Kyzylsu_Init_*_LSS2_1999-10-16.mat` (former `diff_IniSND = 1`). Set
   `use_ini_snow` or the file names in the preprocessing script to change this.
+
+## Outputs (`Parameters/Output_Config.m` + `T&C_Code/Output_Manager.m`)
+
+`Parameters/Output_Config.m` is a plain-text MATLAB script with the user choices:
+- `OUT_set`: file formats for maps (`mat`, `netcdf`) and points (`csv`, `mat`), checkpoint interval (`checkpoint_every_days`), number of checkpoints kept, single/double precision.
+- `OUT_var`: one row per variable, giving the map period (`day`, `month`, `year`, or `''` for none), map function (`mean`, `sum`, `min`, `max`, `last`), point period (`hour`, `day`, `month`, `year`, or `''`), point function, and crown handling (`weighted` or `each`). Comment a row out with `%` to stop exporting a variable.
+
+Layout of `Outputs/Distributed/<Run_Folder>/`:
+
+| Path | Content |
+|---|---|
+| `Maps/<period>/<Var>/<Var>_<period>_<yyyy>.mat` / `.nc` | One folder per variable, one file per year. Records are indexed by date (day of year, month, or 1); not-yet-written records are NaN. Fields: `<Var>` (rows x cols [x columns] x time), `time` (start of each period, as a datenum), `n_steps`, and `info` (units, description, columns, x/y). |
+| `Points/<period>/<Point>_<period>.csv` | One file per point for the whole run: `Date` (start of the period), `n_steps`, then one column per variable/layer/crown (`O_1..O_<ms_max>`). |
+| `Points/<period>/<Point>_<period>_<yyyy>.mat` | The same data as `data` (records x columns), with `columns`, `time`, `n_steps` and `info`. |
+| `Series/<period>/QpointC_<period>.csv` / `.mat` | Outlet discharge, one column per outlet. |
+| `Outputs_info.csv` | Every exported column, with its units, description and aggregation. |
+| `run_status.txt` | Progress: model date, % done, time per step, estimated time left, last checkpoint. |
+| `Store/Checkpoint_<yyyy-MM-dd_HHmm>.mat` | Restart checkpoints. The date in the name is the time up to which the outputs are complete. |
+
+All records are written at the end of each model day, so outputs can be read while the run is going.
+
+Reading outputs:
+- MATLAB: `S = load('Maps/day/SWE/SWE_day_2021.mat'); t = datetime(S.time,'ConvertFrom','datenum');`
+- Python (netCDF): `xarray.open_dataset('Maps/day/SWE/SWE_day_2021.nc')` (all years: `xarray.open_mfdataset('Maps/day/SWE/*.nc')`)
+- Python (mat, v7.3 / HDF5): `h5py.File(...)`
+- Python, R or Excel (points): read the `.csv` files directly.
+
+**Restart:** set `Restart_ID = 1` in `Site_Config_TC.xlsx` and resubmit the same run (same `Run_Folder` and start date).
+- The latest checkpoint is used, or the one ending on `Restart_Date` if a date is given.
+- Records written after the checkpoint are removed, and the run continues from the next step. The outputs are identical to those of an uninterrupted run.
+- The model parameters come from the checkpoint.
+- `Run_EndDate` can be changed to extend a finished run, because the final checkpoint is saved before incomplete periods are written.

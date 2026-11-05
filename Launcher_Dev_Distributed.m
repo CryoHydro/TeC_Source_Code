@@ -605,16 +605,7 @@ tic ;
 %     end
 % end
 
-%--------------------------------------------------------------------------
-%% Restart condition here restart the simulation from a specific month
-%--------------------------------------------------------------------------
-if restart.id == 1  
-    load([Directories.save 'Store/Final_reached_step_' site_name '.mat'])
-end
-
-% Label for the creation of outputs
-%--------------------------------------------------------------------------
-output_creation = 0; 
+% Restart: handled by Output_Manager ('init' phase, just before the time loop)
 
 %% Display setting of the incoming T&C model runs:
 disp(['Site selected: ' site_name])
@@ -716,7 +707,9 @@ clear('L_day')
 %==========================================================================
 
 fts = 2; %First time step
-for t=fts:N_time_step   
+OM_phase = 'init'; Output_Manager; % Reads Output_Config.m; if Restart_ID = 1, loads the last checkpoint. Sets t_start
+
+for t=t_start:N_time_step   
     
     %waitbar(t/N_time_step,bau)
     disp(['Iter: ' char(num2str(t))]);
@@ -732,26 +725,6 @@ for t=fts:N_time_step
     hhlast = char(num2str(Datam_S(1,4)));
     Date_run = datetime(Datam_S(1,1), Datam_S(1,2), Datam_S(1,3));
     
-    %% Matrix for storing - Initializing outputs
-    %==========================================================================
-    % Made by month
-    % Only for the first day of the month
-    % Because of this, the modelling must start on day 1 for now
-    %==========================================================================
-    
-    if output_creation == 0
-    disp("Creating matrices for storing")
-    
-    %Choose in here the outputs to save
-    Initialising_Outputs; %Run initilising outputs script
-    
-    % Series
-    QpointC_series         = single(zeros(zdim, length(Xout)));
-    
-    % Changing the label to not create it again at the next hour
-    %--------------------------------------------------------------------------
-    output_creation = 1;
-    end
 
 
     %% DISTRIBUTED FORCING
@@ -762,6 +735,7 @@ for t=fts:N_time_step
 
     %So create new data every month
     if ~exist('Ta_S', 'var') || str2num(yy) ~= year_loaded || str2num(mth) ~= month_loaded
+    date_forMonth = Date_generator(str2double(yy),str2double(mth)); % Hours of this month, used to select the forcing
 
     disp(['New forcing loaded for period: ' char(num2str(yy)) '-' char(num2str(mth)) ])    
 
@@ -1408,9 +1382,9 @@ for t=fts:N_time_step
         if MASKn(ij)== 1
             %disp(['Cell: ' char(num2str(ij)) ', Veg Type: ' char(num2str(ksv(ij)))])
             Elev=DTMn(ij);
-            %% 
-            tic
-            % BOUNDARY CONDITION  
+            %%
+            % tic % timing of PARAMETERS_SOIL_DEV (prints one line per cell and step)
+            % BOUNDARY CONDITION
             % INTRODUCED SOIL AND VEG. for ij
             %--------------------------------------------------------------
             [aR,             EvL_Zs,       Inf_Zs,     Bio_Zs,      Zinf, ...
@@ -1425,7 +1399,7 @@ for t=fts:N_time_step
                                     PARAMETERS_SOIL_DEV( ...
              ksv(ij),        PSANr(ij),       PCLAr(ij),     PORGr(ij),   DEB_MAPn(ij),  md_max,...
              Afirnn(ij),      SOIL_THn(ij),    VPAR,        TT_par,       OPT_PARAM_vals, Zs, ms_max);
-            toc
+            % toc
 %% 
             %Extract C values directly from grids
             Ccrown = VPAR.Ccrownr(ij);
@@ -1927,352 +1901,16 @@ end
 
 
 
-    %% OUTPUT WRITING
+    %% OUTPUTS AND CHECKPOINTS
     %======================================================================
-    %
+    % Aggregation and writing of the outputs chosen in
+    % <site>/Parameters/Output_Config.m, restart checkpoints (T&C_Code/Output_Manager.m)
     %======================================================================
-       
-    % Ccrown_OUT and EVcode are used in the OUTPUT_MANAGER_DIST_LABEL.m
-    %--------------------------------------------------------------------------
-    % This only for the OUTPUT_MANAGER_DIST_LABEL
-    %Ccrown_OUT =[ 1 ; 1; 1 ; 0.9 ; 1; 1; 0];  %% Ccrown fraction for Plant Functional Types (PFT)
-    %EVcode = [ 1 2 3 4 5 6 7 8 9 10];             %% code of each PFTs
-    %Ccrown_OUT2 = VPAR.Ccrowns;
-    %{
-    %Mike
-    Ccrown_OUT = [ 1   0 ; 0.5  0.5 ; 1   0 ; 1   0];  %% Ccrown fraction for PFT
-    EVcode     = [ 1      2           3       4    ];  %% Code of each PFT
-    cc_max = size(Ccrown_OUT,2);                       %% Number of vegetation types per cell (max.)
-    %}
-
-    % Generating the vector for the calculation of the outputs by crowns
-    %----------------------------------------------------------------------
-    
-%     VPARc.Ccrowns = num2cell(VPAR.Ccrowns); %Turn into cell, as was originally, but mine is a simple table
-%     max_len = max(cellfun(@numel, VPARc.Ccrowns)); %So this is the number of crown values per land cover
-%     padded_cells = cellfun(@(v) [v, zeros(1, max_len - numel(v))], VPARc.Ccrowns, 'UniformOutput', false);
-%     Ccrown_OUT = cell2mat(padded_cells);
-%     Ccrown_OUTv = Ccrown_OUT(ksv, :); From Max's script
-
-%     %I don't know if this is right!! PLEASE CHECK
-%     Ccrown_OUTv=zeros(num_cell,1);
-%     for c=1:size(Ccrown_OUT,1)
-%         v_id = ksv==c; %So this is the land class, we start from 1
-%         Ccrown_OUTv(v_id) = Ccrown_OUT(c);
-%     end
-    %EVcode     = VPAR.Class;
-
-    %Can directly use Ccrown vector of the grid 
-    %Ccrown_OUTv = VPAR.Ccrownr; %[doesn't work for OPT_Veg_Param = 1]
-  
-    % Assignation to temporal matrix
-    %----------------------------------------------------------------------
-    
-    t_date = datetime(Datam_S(1), Datam_S(2), Datam_S(3), Datam_S(4), 0, 0); %Note Datam_S is set to t-1
-    t_assign =  find(t_date  ==  date_forMonth);
-
-    %Transpose the meteo variables
-    Pr_St = Pr_St'; Ta_St = Ta_St'; Tdew_St = Tdew_St'; Ws_St = Ws_St';
-    U_St = U_St'; N_St = N_St'; ea_St = ea_St'; Pre_St = Pre_St';
-    SAD1_St = SAD1_St'; SAD2_St = SAD2_St'; SAB1_St = SAB1_St'; SAB2_St = SAB2_St';
-
-    if t==fts %Sort variable dimensions of chosen variables on first timestep
-    %NOTE if you can new variables in Initialing variable check if they are
-    %multiplied by Ccrown
-    VAR_CROWNS = ["ANPP_H"; "ANPP_L"; "LAI_H"; "LAI_L"; "NPP_H"; "NPP_L"; 
-                  "hc_H";   "hc_L";   "EIn_H"; "EIn_L"; "T_H";   "T_L" ;
-                  "An_H"; "AN_L"; "B_H"; "B_L"; "Bfac_dayH"; "Bfac_dayL";
-                  "RA_H"; "RA_L"; "Rg_H"; "Rg_L"; "SAI_H";"SAI_L"; 
-                  "PHE_S_H"; "PHE_S_L"; "In_L"; "In_H"; "Ci_shdH"; "Ci_shdL";
-                  "Ci_sunH";'Ci_sunL';"LAIdead_H"; "LAIdead_L"; "Rdark_H";"Rdark_L";
-                  "Rmc_H";"Rmc_L";"Rmr_H";"Rmr_L";"Rms_H";"Rms_L"];
-
-    %Check dimensions
-    WSinfo = whos; %Extracts all names and sizes
-    Allnames = {WSinfo.name}; Allnames=Allnames';
-    inVAR = ismember(Allnames,VAR_OUT);
-    num_vars = size(VAR_OUT,1);
-    VARSinfo = WSinfo(inVAR); %Great this is a structure with just the dimensions of the output variables
-    Varsinfonames = {VARSinfo.name}; Varsinfonames=Varsinfonames';
-    all_sizes1 = zeros(num_vars,1); %Needs to be three in case of array %First dimension
-    all_sizes2 = zeros(num_vars,1); %Needs to be three in case of array %Second dimension
-    all_sizes3 = zeros(num_vars,1); %Needs to be three in case of array %Third dimension
-    for v=1:num_vars
-            all_sizes1(v,1) = VARSinfo(v).size(1); %1st dimension
-            all_sizes2(v,1) = VARSinfo(v).size(2); %2nd dimension
-            if size(VARSinfo(v).size,3)>1
-            all_sizes3(v,1) = VARSinfo(v).size(3); %3rd dimension only if exists
-            end
-    end
-    %Note all sizes at the moment refer to the variable order in VARSinfo,
-    %not VAR_OUT so make a table
-    VAR_OUT_T = array2table(VAR_OUT,'VariableNames',{'Name'});
-    for v=1:num_vars
-        idvar = matches(Varsinfonames,VAR_OUT_T.Name(v));
-        VAR_OUT_T.Dim1(v) = all_sizes1(idvar);
-        VAR_OUT_T.Dim2(v) = all_sizes2(idvar);
-        VAR_OUT_T.Dim3(v) = all_sizes3(idvar);
-    end
-    end
-    
-    %----------------------------------------------------------------
-    %Assign the gridded values to an hourly time in the initial grids
-    %-----------------------------------------------------------------
-
-    for k=1:length(VAR_OUT)
-        if VAR_OUT(k) == "QpointC" % case of discharge
-        QpointC_hourly(t_assign,:) = QpointC';                                  % runoff/discharge    
-    
-        elseif VAR_OUT(k) == "O"
-        O1_hourly(:,:,t_assign)       = reshape(O(:,1), xdim,ydim);            % Soil mositure layer 1
-        O2_hourly(:,:,t_assign)       = reshape(O(:,2), xdim,ydim);            % Soil mositure layer 2
-        O3_hourly(:,:,t_assign)       = reshape(O(:,3), xdim,ydim);            % Soil mositure layer 3
-        O4_hourly(:,:,t_assign)       = reshape(O(:,4), xdim,ydim);            % Soil mositure layer 4
-        O5_hourly(:,:,t_assign)       = reshape(O(:,5), xdim,ydim);            % Soil mositure layer 5
-        O6_hourly(:,:,t_assign)       = reshape(O(:,6), xdim,ydim);            % Soil mositure layer 6
-        O7_hourly(:,:,t_assign)       = reshape(O(:,7), xdim,ydim);            % Soil mositure layer 7
-        O8_hourly(:,:,t_assign)       = reshape(O(:,8), xdim,ydim);            % Soil mositure layer 8
-        O9_hourly(:,:,t_assign)       = reshape(O(:,9), xdim,ydim);            % Soil mositure layer 9
-        O10_hourly(:,:,t_assign)      = reshape(O(:,10), xdim,ydim);           % Soil mositure layer 10
-    
-        elseif VAR_OUT(k) == "snow_albedo"
-        snow_albedo1_hourly(:,:,t_assign)       = reshape(snow_albedo(:,1), xdim,ydim);            % albedo layer 1
-        snow_albedo2_hourly(:,:,t_assign)       = reshape(snow_albedo(:,2), xdim,ydim);            % albedo layer 2
-        snow_albedo3_hourly(:,:,t_assign)       = reshape(snow_albedo(:,3), xdim,ydim);            % albedo layer 3
-        snow_albedo4_hourly(:,:,t_assign)       = reshape(snow_albedo(:,4), xdim,ydim);            % albedo layer 4
-
-        elseif VAR_OUT(k) == "Tdp"
-        Tdp1_hourly(:,:,t_assign)       = reshape(Tdp(:,1), xdim,ydim);            % Tdp layer 1
-        Tdp2_hourly(:,:,t_assign)       = reshape(Tdp(:,2), xdim,ydim);            % Tdp layer 2
-        Tdp3_hourly(:,:,t_assign)       = reshape(Tdp(:,3), xdim,ydim);            % Tdp layer 3
-        Tdp4_hourly(:,:,t_assign)       = reshape(Tdp(:,4), xdim,ydim);            % Tdp layer 4
-        Tdp5_hourly(:,:,t_assign)       = reshape(Tdp(:,5), xdim,ydim);            % Tdp layer 5
-        Tdp6_hourly(:,:,t_assign)       = reshape(Tdp(:,6), xdim,ydim);            % Tdp layer 6
-        Tdp7_hourly(:,:,t_assign)       = reshape(Tdp(:,7), xdim,ydim);            % Tdp layer 7
-        Tdp8_hourly(:,:,t_assign)       = reshape(Tdp(:,8), xdim,ydim);            % Tdp layer 8
-        Tdp9_hourly(:,:,t_assign)       = reshape(Tdp(:,9), xdim,ydim);            % Tdp layer 9
-        Tdp10_hourly(:,:,t_assign)      = reshape(Tdp(:,10), xdim,ydim);           % Tdp layer 10
-
-        elseif ismember(VAR_OUT(k), VAR_CROWNS) % Case of variables with crowns
-            commandStr = [char(VAR_OUT_HOUR(k)) '(:,:,t_assign) = reshape(sum(' char(VAR_OUT(k)) '.*Ccrown_OUTv,2),xdim,ydim)' ';']; %Other matrices
-            eval(commandStr);
-    
-        elseif VAR_OUT_T.Dim1(v)==(xdim*ydim) && VAR_OUT_T.Dim2(v)==1 %So correct dimensions
-                commandStr = [char(VAR_OUT_HOUR(k)) '(:,:,t_assign) = reshape(' char(VAR_OUT(k)) ',xdim,ydim)' ';']; %Other matrices
-                eval(commandStr);
-        
-        else % Other variables with different sizes
-                disp(['Variable ' char(VAR_OUT(k)) ' has a different dimension to Ccrown and other dimensions considered'])
-        end   
-    end
-
-    %------------------------------------
-    % Extracting data for points
-    %--------------------------------------------------
-
-    %NOTE VEG DATA NOT CORRECTED FOR CCROWN
-
-    % Variables saved at the points (same order as in Timestep_T). Each keeps
-    % its own number of columns (e.g. O and Tdp have ms_max columns)
-    vars_to_keep = {'EICE','ESN','SND','SWE','Ta_St','Ws_St','U_St','N_St','ea_St','Rn',...
-        'SAD1_St','SAD2_St','SAB1_St','SAB2_St','Pre_St','Pr_St','Pr_sno','Pr_liq','snow_albedo','Smelt','Imelt', ...
-        'ICE','ICE_D','QE','ros','NDVI','T_H','T_L','O','FROCK', ...
-        'LAI_H','LAI_L','NPP_H','NPP_L','Csno','An_L','An_H',...
-        'EG','EIn_L','EIn_H','EIn_rock','H','HV','G','In_L','In_H','In_SWE','In_rock',...
-        'OF','OH','OL','OS','PHE_S_L','PHE_S_H','Qfm','Qv','RA_L','RA_H','Rg_L','Rg_H','Rh','SAI_L','SAI_H',...
-        'Tdp','Tdp_L','Tdp_H','Ts','ZWT','dQ_S','dQVEG','IP_wc'};
-
-    % Values of this time step at the points (one row per point)
-    Timestep_T = table(EICE,ESN,SND,SWE,Ta_St,Ws_St,U_St,N_St,ea_St,Rn,...
-        SAD1_St,SAD2_St,SAB1_St,SAB2_St,Pre_St,Pr_St,Pr_sno,Pr_liq,snow_albedo,Smelt,Imelt, ...
-        ICE,ICE_D,QE,ros,NDVI,T_H,T_L,O,FROCK, ...
-        LAI_H,LAI_L,NPP_H,NPP_L,Csno,An_L,An_H,...
-        EG,EIn_L,EIn_H,EIn_rock,H,HV,G,In_L,In_H,In_SWE,In_rock,...
-        OF,OH,OL,OS,PHE_S_L,PHE_S_H,Qfm,Qv,RA_L,RA_H,Rg_L,Rg_H,Rh,SAI_L,SAI_H,...
-        Tdp,Tdp_L,Tdp_H,Ts,ZWT,dQ_S,dQVEG,IP_wc,'VariableNames',vars_to_keep);
-    Timestep_T_Pts = Timestep_T(Points.idx,:);
-
-    if t==fts % Create the empty point tables, with the column sizes of the first time step
-        num_pts = size(Points,1);
-        Empty_T = Timestep_T_Pts(ones(size(Date,2),1),:);
-        Empty_T{:,:} = 0;
-        Empty_T = addvars(Empty_T,Date','Before',1,'NewVariableNames','Date');
-        Points_Data = struct('Table',repmat({Empty_T},num_pts,1));
-        clear Empty_T
-    end
-
-    for p=1:num_pts
-        Points_Data(p).Table(t-1,vars_to_keep) = Timestep_T_Pts(p,:); %Note t-1, so in correct time!
-    end
-
-    clear Timestep_T Timestep_T_Pts %Remade next timestep
-    %Old for output manager
-% %     % Outputs for vegetation
-% %     ANPP_H_spatial(:,:,t_assign)   = reshape(sum(ANPP_H.*Ccrown_OUTv,2),xdim,ydim); 
-% %     ANPP_L_spatial(:,:,t_assign)   = reshape(sum(ANPP_L.*Ccrown_OUTv,2),xdim,ydim);
-% %     LAI_H_spatial(:,:,t_assign)    = reshape(sum(LAI_H.*Ccrown_OUTv,2),xdim,ydim);
-% %     LAI_L_spatial(:,:,t_assign)    = reshape(sum(LAI_L.*Ccrown_OUTv,2),xdim,ydim);
-% %     NDVI_spatial(:,:,t_assign)     = reshape(NDVI,xdim,ydim);
-% % 
-% %     % Output for ET
-% %     EG_spatial(:,:,t_assign)       = reshape(EG,xdim,ydim);
-% %     EICE_spatial(:,:,t_assign)     = reshape(EICE,xdim,ydim);    
-% %     EIn_H_spatial(:,:,t_assign)    = reshape(sum(EIn_H.*Ccrown_OUTv,2),xdim,ydim);
-% %     EIn_L_spatial(:,:,t_assign)    = reshape(sum(EIn_L.*Ccrown_OUTv,2),xdim,ydim);
-% %     EIn_rock_spatial(:,:,t_assign) = reshape(EIn_rock,xdim,ydim); 
-% %     EIn_urb_spatial(:,:,t_assign)  = reshape(EIn_urb,xdim,ydim); 
-% %     EWAT_spatial(:,:,t_assign)     = reshape(EWAT,xdim,ydim); 
-% %     T_H_spatial(:,:,t_assign)      = reshape(sum(T_H.*Ccrown_OUTv,2),xdim,ydim); 
-% %     T_L_spatial(:,:,t_assign)      = reshape(sum(T_L.*Ccrown_OUTv,2),xdim,ydim); 
-% %     SSN_spatial(:,:,t_assign)      = reshape(SSN,xdim,ydim);  
-% %     ESN_spatial(:,:,t_assign)      = reshape(ESN,xdim,ydim);
-% %     ELitter_spatial(:,:,t_assign)  = reshape(ELitter,xdim,ydim);
-% %     ESN_In_spatial(:,:,t_assign)  = reshape(ESN_In,xdim,ydim);
-% % 
-% %     % Outputs for snow
-% %     SND_spatial(:,:,t_assign)      = reshape(SND,xdim,ydim);
-% %     SWE_spatial(:,:,t_assign)      = reshape(SWE,xdim,ydim);    
-% %         
-% %     % Outputs for groundwater
-% %     FROCK_spatial(:,:,t_assign)    = reshape(FROCK,xdim,ydim); 
-% %     f_spatial(:,:,t_assign)        = reshape(f,xdim,ydim); 
-% %     Gfin_spatial(:,:,t_assign)     = reshape(Gfin,xdim,ydim); 
-% %     %GPP_H_spatial(:,:,t_assign) 
-% %     %GPP_L_spatial(:,:,t_assign) 
-% %     G_spatial(:,:,t_assign)        = reshape(G,xdim,ydim);
-% %     hc_H_spatial(:,:,t_assign)     = reshape(sum(hc_H.*Ccrown_OUTv,2),xdim,ydim);
-% %     hc_L_spatial(:,:,t_assign)     = reshape(sum(hc_H.*Ccrown_OUTv,2),xdim,ydim);
-% % 
-% %     % Outputs runoff
-% %     %Q_channel_spatial(:,:,t_assign)       = reshape(Q_channel,xdim,ydim);
-% %     %q_runon_spatial(:,:,t_assign)         = reshape(q_runon,xdim,ydim);
-% %     QpointC_series(t_assign,:)     = QpointC;
-% % 
-% %     Rd_spatial(:,:,t_assign)       = reshape(Rd,xdim,ydim);
-
-    %% SAVING
-    %======================================================================
-    % Only save when it is the last day of the month or the last iteration
-    %======================================================================
-    if t_date  == t_store | t == N_time_step
-
-    % Saving
-    %----------------------------------------------------------------------
-    disp(['Storing results in .mat file for: ' char(string(Date_run, 'MMM')) '_' char(string(Date_run, 'yyyy'))])
-
-    % Daily calculation before saving
-    %----------------------------------------------------------------------
-    all_hours = length(date_forMonth); % all hours within the month
-    div = 1:24:(all_hours+1); %divisions for calculation
-    
-    % Variables that must be summed - check that there aren't more!
-    var_summ = ["Pr_sno_hourly";   "Pr_liq_hourly";    "Pr_St_hourly";  "EG_hourly";       "EICE_hourly";    "EIn_H_hourly"; 
-                "EIn_L_hourly";    "EIn_rock_hourly";   "EIn_urb_hourly";  "EWAT_hourly";    "T_H_hourly";
-                "T_L_hourly";      "ESN_hourly";        "ELitter_hourly";  "ESN_In_hourly";  "Smelt_hourly";
-                "Imelt_hourly";    "Rd_hourly";         "Rh_hourly";       "f_hourly";       "Lk_rock_hourly";
-                "Lk_hourly";       "Lk_wat_hourly"]; % variables that must be summed
-    
-    for k=1:length(VAR_OUT_HOUR)
-        for y = 1:(length(div)-1)
-            if VAR_OUT_HOUR(k) == "QpointC_hourly" 
-                QpointC_daily(y,:) = mean(QpointC_hourly(div(y):(div(y+1)-1),:)); % Discharge
-            else
-                if ismember(VAR_OUT_HOUR(k), var_summ)
-                commandStr = [char(VAR_OUT_DAY(k)) '(:,:,y) = sum(' char(VAR_OUT_HOUR(k)) '(:,:,div(y):(div(y+1)-1)),3)' ';']; %Other matrices
-                eval(commandStr);                
-                else
-                commandStr = [char(VAR_OUT_DAY(k)) '(:,:,y) = mean(' char(VAR_OUT_HOUR(k)) '(:,:,div(y):(div(y+1)-1)),3)' ';']; %Other matrices
-                eval(commandStr);
-                end
-            end
-        end
-    end
-
-    % Compressing daily results  
-    %----------------------------------------------------------------------   
-%     %i=1; %Works only on Max' meteo inputs
-%     for i=1:length(VAR_OUT_DAY)     
-%         if VAR_OUT_DAY(i) ~= "QpointC_daily" 
-%             commandStr = [char(VAR_OUT_DAY(i)) ' = Data_compressor_grid(' char(VAR_OUT_DAY(i)) ',"mm","compress")' ';']; %Other matrices
-%             eval(commandStr);
-%         end
-%     end
-	
-    % Converting discharge to table to preserve names
-    QpointC_daily = array2table(QpointC_daily, 'VariableNames', NAMEout);
-    
-    % Saving daily results
-    %----------------------------------------------------------------------    
-    VAR_CELL = cellstr(VAR_OUT_DAY);
-    save([Directories.save '3D_Outputs_'  char(string(Date_run, 'MMM')) '_' char(string(Date_run, 'yyyy')) '.mat'], ...
-            VAR_CELL{:});
-
-    % Saving point data
-    %------------------------------------------------------------------------
-    %Note this doesn't need to happen every month, but it means data is
-    %saved in case of crash
-
-    save(strcat([Directories.save,'Points_Data.mat']),'Points_Data','Points','-v7.3','-nocompression'); %Saving the data and point info for completeness
-
-    % Saving
-    %----------------------------------------------------------------------
-%     disp('Storing results in .mat file')
-% 
-%     save([Directories.save '/3D_Outputs_' yy '_' mth '.mat'], ...
-%          'ANPP_H_spatial',   'ANPP_L_spatial',    'EG_spatial',      'EIn_H_spatial',  'EIn_L_spatial', ...
-%          'EIn_rock_spatial', 'EIn_urb_spatial',   'EWAT_spatial',    'T_H_spatial',    'T_L_spatial', ...
-%          'SSN_spatial',      'ESN_spatial',       'ELitter_spatial', 'ESN_In_spatial', 'FROCK_spatial', ...
-%          'f_spatial',        'Gfin_spatial',      'G_spatial',       'hc_H_spatial',   'hc_L_spatial', ...
-%          'EICE_spatial',     'LAI_H_spatial',     'LAI_L_spatial', ...
-%          'NDVI_spatial',     'SND_spatial' ,      'SWE_spatial', ...
-%          'Rd_spatial',       'QpointC_series' ...
-%           );
-
-    % Changing the label to create again the matrices for storing
-    %--------------------------------------------------------------------------
-    output_creation = 0;
-    
-    %% Memory 
-    %----------------------------------------------------------------------
-    % Information about the memory used by variables when saving occurs
-    %----------------------------------------------------------------------
-    
-    % Get a structure array of all variables in the current workspace
-    %--------------------------------------------------------------------------
-    vars = whos;
-    
-    % Iterate through the variables and sum their sizes
-    %--------------------------------------------------------------------------
-    totalSize = 0;
-    for i = 1:length(vars)
-        totalSize = totalSize + vars(i).bytes;
-    end
-    
-    % Display variables size
-    %--------------------------------------------------------------------------
-    disp(['Memory used by variables at the end of MAIN_FRAME: ', num2str(totalSize/1e6), ' MB']);
-    
-    % Saving actual conditions in the model to restart if needed
-    %----------------------------------------------------------------------
-    %run(['INIT_COND_MID.m'])
-
-    end
-
-    %run(['OUTPUT_MANAGER_DIST_LABEL.m']);
-
-    % Save the workspace at frequent interval. Very useful in case it crashes 
-    %if  mod(t,25)==0    
-    %    save([outlocation, Fstep], '-regexp', '^(?!(FF_BC|LWIN_BC|PARB|PARD|PP_BC|PRESS_BC|RH_BC|SAB1|SAB2|SAD1|SAD2|TA_BC|WS)$).');
-    %end   
-
-    %if  mod(t,8760)==0  ||  t==N_time_step
-    %    Fstep2= strcat(Fstep,'_',num2str(t));
-    %    save([outlocation, Fstep2], '-regexp', '^(?!(FF_BC|LWIN_BC|PARB|PARD|PP_BC|PRESS_BC|RH_BC|SAB1|SAB2|SAD1|SAD2|TA_BC|WS)$).');
-    %end
-
+    OM_phase = 'step'; Output_Manager;
 
 end
 %close(bau)
+OM_phase = 'close'; Output_Manager;
 
 %% Display
 Computational_Time =toc;
