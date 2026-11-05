@@ -227,15 +227,18 @@ ZR95_Ht =zeros(NNd,cc); ZR95_Lt =zeros(NNd,cc);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-if  not(exist('OPT_BG','var'))
-    OPT_SoilBiogeochemistry = 0;
-else
-    if  OPT_BG == 0
-        OPT_SoilBiogeochemistry = 0;
-    else
-        OPT_SoilBiogeochemistry = 1;
-    end 
-end
+OPT_SoilBiogeochemistry = OPT_PARAM_vals.OPT_SoilBiogeochemistry;
+OPT_BG = OPT_SoilBiogeochemistry;
+
+% if  not(exist('OPT_BG','var'))
+%     OPT_SoilBiogeochemistry = 0;
+% else
+%     if  OPT_BG == 0
+%         OPT_SoilBiogeochemistry = 0;
+%     else
+%         OPT_SoilBiogeochemistry = 1;
+%     end 
+% end
 
 %%%%%%%%%%%%%
 if OPT_SoilBiogeochemistry == 1
@@ -273,9 +276,9 @@ if OPT_SoilBiogeochemistry == 1
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%% CALL PARAMETERS AND INITIAL CONDITION
+%%%%%%%%% CALL INITIAL CONDITIONS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-run(PARAM_IC);
+run('Multipoint_INIT_DEV.m'); %Only extra initial conditions, previously in PARAM_IC
 
 %disp(cc)
 %% Definition of Veg_Optical_Parameter
@@ -291,26 +294,26 @@ run(PARAM_IC);
 %==========================================================================
 % CHECK
 %==========================================================================
-for i=1:cc
-    %%%%%%%% Vegetation Optical Parameter
-    [PFT_opt_H(i)]=Veg_Optical_Parameter(OPT_PROP_H(i));
-    [PFT_opt_L(i)]=Veg_Optical_Parameter(OPT_PROP_L(i));
+% for i=1:cc
+%     %%%%%%%% Vegetation Optical Parameter
+%     [PFT_opt_H(i)]=Veg_Optical_Parameter(OPT_PROP_H(i));
+%     [PFT_opt_L(i)]=Veg_Optical_Parameter(OPT_PROP_L(i));
+% 
+%     [Stoich_H(i)]=Veg_Stoichiometric_Parameter(Nl_H(i));
+%     [ParEx_H(i)]=Exudation_Parameter(0);
+%     [Mpar_H(i)]=Vegetation_Management_Parameter;
+% 
+%     [Stoich_L(i)]=Veg_Stoichiometric_Parameter(Nl_L(i));
+%     [ParEx_L(i)]=Exudation_Parameter(0);
+%     [Mpar_L(i)]=Vegetation_Management_Parameter;
+% end
 
-    [Stoich_H(i)]=Veg_Stoichiometric_Parameter(Nl_H(i));
-    [ParEx_H(i)]=Exudation_Parameter(0);
-    [Mpar_H(i)]=Vegetation_Management_Parameter;
 
-    [Stoich_L(i)]=Veg_Stoichiometric_Parameter(Nl_L(i));
-    [ParEx_L(i)]=Exudation_Parameter(0);
-    [Mpar_L(i)]=Vegetation_Management_Parameter;
-end
+%Restating_parameters;
 
-
-Restating_parameters;
-
-if length(Oice)==1
-    Oice=zeros(NN,ms);
-end
+% if length(Oice)==1
+%     Oice=zeros(NN,ms);
+% end
 
 %%%%%%%%%%
 Tdeb =zeros(NN,max(1,length(Zs_deb)-1));
@@ -337,35 +340,37 @@ Tstm0= Ts(1);
 %%%%%%%%%%%%%%%% NUMERICAL METHODS OPTIONS (Numerical tolerance)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%Opt_CR = optimset('TolX',3);
-%Opt_ST = optimset('TolX',0.1);
-%Opt_ST = optimset('TolX',0.1,'Display','iter');
-Opt_CR = optimset('TolFun',1);%,'UseParallel','always');   % for internal CO2 computation
-Opt_ST = optimset('TolFun',0.1);%,'UseParallel','always'); % for surface temperature
-Opt_ST2 = optimset('TolFun',0.1,'Display','off');
-OPT_SM=  odeset('AbsTol',0.05,'MaxStep',dth);              % for soil moisture
-OPT_VD=  odeset('AbsTol',0.05);                            % for carbon budget
-OPT_PH= odeset('AbsTol',0.01);                             % for internal plant hydraulic
-OPT_STh = odeset('AbsTol',0.02);                           % for heat transfer
-OPT_VegSnow = 1;                                           % Option for computing energy budget of vegetation when there is snow at the ground   
-OPT_SoilTemp = 1;                                          % Option for computing soil temperature or not. 
-OPT_FR_SOIL = 1;      % whether you want soil freezing on or off. Mike found that it was causing problems for Maipo streamflow, so I turned it off
-OPT_min_SPD = 0.006;  % [m] minimum snow pack depth to have a multilayer snow 
+Opt_CR = OPT_Num.Opt_CR;  % for internal CO2 computation
+Opt_ST = OPT_Num.Opt_ST; % for surface temperature
+Opt_ST2 = OPT_Num.Opt_ST2; 
+OPT_SM = OPT_Num.OPT_SM;   % for soil moisture
+OPT_VD = OPT_Num.OPT_VD;   % for carbon budget
+OPT_PH = OPT_Num.OPT_PH;    % for internal plant hydraulic
+OPT_STh = OPT_Num.OPT_STh;  % for heat transfer (note this is much smaller for distributed) 5e+3 c/f 0.02 originally
+
+%Release the Options here
+To_release = {'fieldNames','OPT_VegSnow','OPT_SoilTemp','OPT_FR_SOIL','min_SPD','OPT_VCA','OPT_ALLOME','OPT_PlantHydr','OPT_EnvLimitGrowth'};
+v2struct(OPT_PARAM_vals,To_release);
+
+%OPT_VegSnow = 1;                                           % Option for computing energy budget of vegetation when there is snow at the ground   
+%OPT_SoilTemp = 1;                                          % Option for computing soil temperature or not. 
+%OPT_FR_SOIL = 1;      % whether you want soil freezing on or off. Mike found that it was causing problems for Maipo streamflow, so I turned it off
+%OPT_min_SPD = 0.006;  % [m] minimum snow pack depth to have a multilayer snow 
 
 %%%%
-if  not(exist('OPT_VCA','var'))
-    OPT_VCA = 0;
-    OPT_ALLOME = 0;
-end
+% if  not(exist('OPT_VCA','var'))
+%     OPT_VCA = 0;
+%     OPT_ALLOME = 0;
+% end
 if  not(exist('OPT_DROOT','var'))
     OPT_DROOT = 0;
 end
-if  not(exist('OPT_PlantHydr','var'))
-    OPT_PlantHydr = 0;
-end
-if  not(exist('OPT_EnvLimitGrowth','var'))
-    OPT_EnvLimitGrowth = 0;
-end
+% if  not(exist('OPT_PlantHydr','var'))
+%     OPT_PlantHydr = 0;
+% end
+% if  not(exist('OPT_EnvLimitGrowth','var'))
+%     OPT_EnvLimitGrowth = 0;
+% end
 if  not(exist('OPT_WET','var'))
     OPT_WET = 0;
 else
@@ -736,8 +741,8 @@ for i=2:NN
         Tdew(i),t_sls(i-1),ros(i-1),SP_wc(i-1),fpr,Pr_sno(pdind),...
         Urb_Par,In_max_urb,In_max_rock,K_usle,tau_sno(i-1),Ta(pdind),Slo_top,Slo_pot,Asur,Ared,aTop,EK(i-1),q_runon(i),Qi_in(i,:),...
         pow_dis,a_dis,Salt(i),...
-        SPAR,SN,OPT_min_SPD,OPT_VegSnow,OPT_SoilTemp,OPT_PlantHydr,Opt_CR,Opt_ST,Opt_ST2,OPT_SM,OPT_STh,OPT_FR_SOIL,OPT_PH, ...
-        parameterize_phase, hSTL, Albsno_method);    
+        SPAR,SN,min_SPD,OPT_VegSnow,OPT_SoilTemp,OPT_PlantHydr,Opt_CR,Opt_ST,Opt_ST2,OPT_SM,OPT_STh,OPT_FR_SOIL,OPT_PH, ...
+        parameterize_phase, hSTL, OPT_Albsno);    
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%% End of HYDROLOGIC UNIT %%%%%%%%%%%%%%%%%%%%
     
