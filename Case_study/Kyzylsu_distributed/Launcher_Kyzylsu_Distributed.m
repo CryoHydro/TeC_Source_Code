@@ -2,18 +2,19 @@
 
 close all
 clc
+clear all
 %  clear all   % Don't clear all such that it can be run on the HPC cluster without any issues 
 %delete(gcp('nocreate'))
 
 %%%%%%%%%%%%%%% Case study parameters %%%%%%%%%%%%%%%%%%%%
 
-folder_path = 'C:\Users\jouberto\Desktop\T&C\TeC_Source_Code'; % Put here the path of where you downloaded the repository
+folder_path = 'C:\Users\ajoubert\Documents\GitHub\TeC_Source_Code'; % Put here the path of where you downloaded the repository
 folder_path_HPC = '/nfs/scistore18/pelligrp/ajoubert/TeC_Source_Code'; % Put here the path of where you downloaded the repository
 study_name = 'Kyzylsu_distributed';
-local_machine = 'WSL28243'; % put your computer name here (to differentiate it with the HPC cluster)
+local_machine = 'WNFRPE014'; % put your computer name here (to differentiate it with the HPC cluster)
 
 % It is better to store the model output outside of the git T%C repository.
-path_output = 'C:\Users\jouberto\Desktop\T&C\TC_outputs\Kyzylsu\Distributed';
+path_output = 'C:\Users\ajoubert\Desktop\T&C\TC_outputs\Kyzylsu\Distributed';
 path_output_HPC = '/nfs/scistore18/pelligrp/ajoubert/TC_outputs/Kyzylsu/Distributed';
 
 %%%%%%%%%%%%%% site specifications %%%%%%%%%%%%%%
@@ -40,7 +41,7 @@ DeltaGMTs=[5.75,5,8,5.45,8,8];
 Zbass=[3862,3579,3800,5449,4600,5850]; %in this setup: elevation of the reference pressure logger
 
 sim_start = "01-Sep-2021 00:00:00"; % First timestep of the simulation
-sim_end = "01-Oct-2021 00:00:00"; % Last timestep of the simulation
+sim_end = "01-Sep-2021 03:00:00"; % Last timestep of the simulation
 
 % Starting point of the simulation
 x1s = ["01-Oct-2018 00:00:00", sim_start, "01-Oct-2018 00:00:00","01-Oct-2018 00:00:00","01-Jan-2015 00:00:00","01-Jan-2015 00:00:00"];
