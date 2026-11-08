@@ -7,13 +7,13 @@ clc
 
 %%%%%%%%%%%%%%% Case study parameters %%%%%%%%%%%%%%%%%%%%
 
-folder_path = 'C:\Users\jouberto\Desktop\T&C\TeC_Source_Code'; % Put here the path of where you downloaded the repository
+folder_path = 'C:\Users\ajoubert\Documents\GitHub\TeC_Source_Code'; % Put here the path of where you downloaded the repository
 folder_path_HPC = '/nfs/scistore18/pelligrp/ajoubert/TeC_Source_Code'; % Put here the path of where you downloaded the repository
 study_name = 'Kyzylsu_distributed';
-local_machine = 'WSL28243'; % put your computer name here (to differentiate it with the HPC cluster)
+local_machine = 'WNFRPE014'; % put your computer name here (to differentiate it with the HPC cluster)
 
 % It is better to store the model output outside of the git T%C repository.
-path_output = 'C:\Users\jouberto\Desktop\T&C\TC_outputs\Kyzylsu\Distributed';
+path_output = 'C:\Users\ajoubert\Desktop\T&C\TC_outputs\Kyzylsu\Distributed';
 path_output_HPC = '/nfs/scistore18/pelligrp/ajoubert/TC_outputs/Kyzylsu/Distributed';
 
 %%%%%%%%%%%%%% site specifications %%%%%%%%%%%%%%
@@ -1464,7 +1464,7 @@ end
     %%%%%%%%%%%%%%%%% OUTPUT WRITING %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      
-    run([folder_path '/T&C_Code/OUTPUT_MANAGER_DIST_LABEL.m']);
+    % run([folder_path '/T&C_Code/OUTPUT_MANAGER_DIST_LABEL.m']);
 
     % Save the workspace at frequent interval. VEry useful in case it crashed 
     if  mod(t,25)==0    
