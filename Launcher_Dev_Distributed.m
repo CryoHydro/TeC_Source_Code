@@ -30,12 +30,16 @@ site_name = site_name_list{site_num};
 %==================================================
 
 % Sub-path for Config file
-Directories.config = [site_name '/Parameters/Site_config_TC.xlsx'];
-
-CONFIG = readcell(Directories.config);
-CON_vals_id = find(CONFIG(1,:)=="Value");
-CON_label_id = find(CONFIG(1,:)=="Variable");
-CONFIG_vals = cell2struct(CONFIG(2:end,CON_vals_id),CONFIG(2:end,CON_label_id)'); %Now a structure of the config info
+% Config file: plain MATLAB script that defines the structure CONFIG_vals.
+% Another file can be chosen without editing this launcher, e.g. in an HPC job script:
+%   export TC_CONFIG=Kyzylsu/Parameters/Site_Config_Run03.m
+Directories.config = getenv('TC_CONFIG');
+if isempty(Directories.config)
+    Directories.config = [site_name '/Parameters/Site_Config_TC.m'];
+end
+if ~isfile(Directories.config); error('Config file not found: %s', Directories.config); end
+fprintf('Config file: %s\n', Directories.config);
+run(Directories.config); % defines CONFIG_vals
 
 IniCond.DeltaGMT = CONFIG_vals.DeltaGMT; %Define change from GMT
 IniCond.run_folder = CONFIG_vals.Run_Folder; %Define folder to save outputs
@@ -274,6 +278,25 @@ end
 VPAR.Veg_type = VPAR_T.Veg_type;
 VPAR.Ccrowns = VPAR_T.Ccrowns;
 
+% ---- Vegetation parameters of each class, built once (used by PARAMETERS_SOIL_DEV) ----
+% TT_vals{iv} holds the TT_par values of the vegetation types of class VPAR.Class(iv),
+% one struct field per parameter (same result as the old per-cell code in PARAMETERS_SOIL_DEV)
+TT_vals = cell(numel(VPAR.Class),1);
+for iv = 1:numel(VPAR.Class)
+    try
+        [tv_tf,tv_loc] = ismember(TT_par.Properties.VariableNames,VPAR.Veg_type{iv});
+        [~,tv_p] = sort(tv_loc(tv_tf)); % keep the order of the veg names
+        tv_idx = find(tv_tf);
+        tv_T = rows2vars(TT_par(:,tv_idx(tv_p)));
+        tv_T = tv_T(:,2:end); % remove the Veg name column
+        tv_T.Properties.VariableNames = TT_par{:,TT_par.Properties.VariableNames == "Parameters"};
+        TT_vals{iv} = table2struct(tv_T,ToScalar=true);
+    catch tv_ME
+        warning('No vegetation parameters for class %d (%s): %s', VPAR.Class(iv), strjoin(VPAR.Veg_type{iv},', '), tv_ME.message);
+    end
+end
+clear iv tv_tf tv_loc tv_p tv_idx tv_T tv_ME
+
 if OPT_Veg_Param==1
     %In this case there are single values per land cover
     %Turn into a grid
@@ -336,15 +359,11 @@ for v=1:No_vpar
 end
 
 %Save the parameter files with the model outputs
-%Clean CONFIG for saving
-CONFIG_s = CONFIG;
-Cmask = cellfun(@(CONFIG_s) any(isa(CONFIG_s,'missing')), CONFIG_s);
-CONFIG_s(Cmask) = {[]}; % 
 
 writetable(TT_par,[Directories.save 'Parameters/' 'TT_par.xlsx']);
 writetable(OPT_PARAM,[Directories.save 'Parameters/' 'OPT_PARAM.xlsx']);
 writetable(VPAR_T,[Directories.save 'Parameters/' 'VPAR_T.xlsx']);
-writecell(CONFIG_s,[Directories.save 'Parameters/' 'CONFIG.xlsx']);
+copyfile(Directories.config,[Directories.save 'Parameters/' 'Site_Config_TC.m']); % exact config used for this run
 
 %-----------------------------------------------------------------------
 % 3. Glacier and snow parameters
@@ -1020,10 +1039,7 @@ for t=t_start:N_time_step
     %needed, if terrain effects have not been considered during pre-processing
     cos_fst = cos(atan(Slo_top))*sin(h_S) + sin(atan(Slo_top)).*cos(h_S).*cos(zeta_S-Aspect*pi/180);
     cos_fst(cos_fst<0)=0; %cos_fst is x,y grid   
-
-    %Max added a correction for numerical problems here
-    %if sin(h_S_<=0.10) radiation vars = 0;
-
+    
     %Reshape radiation grids for calculations
     %Note shifting to rows to match radiation inputs
     SvFn = reshape(SvF,num_cell,1)';
@@ -1054,6 +1070,12 @@ for t=t_start:N_time_step
     SAD2_St(isnan(SAD2_St)) = 0;
     PARB_St(isnan(PARB_St)) = 0;
     PARD_St(isnan(PARD_St)) = 0;
+
+    % Sun below ~5.7 deg: the slope correction (division by sin(h_S)) is unstable;
+    % set all shortwave to 0, as in the former launcher
+    if sin(h_S) <= 0.10
+        SAB1_St(:) = 0; SAB2_St(:) = 0; SAD1_St(:) = 0; SAD2_St(:) = 0; PARB_St(:) = 0; PARD_St(:) = 0;
+    end
        
     %% Carbon
     Ca_S = Ca(t)*MASKn; %Carbon is already set on the correct time series
@@ -1398,7 +1420,7 @@ for t=t_start:N_time_step
              Kct,            ExEM,           ParEx_H,      Mpar_H,     ParEx_L,     Mpar_L] = ....
                                     PARAMETERS_SOIL_DEV( ...
              ksv(ij),        PSANr(ij),       PCLAr(ij),     PORGr(ij),   DEB_MAPn(ij),  md_max,...
-             Afirnn(ij),      SOIL_THn(ij),    VPAR,        TT_par,       OPT_PARAM_vals, Zs, ms_max);
+             Afirnn(ij),      SOIL_THn(ij),    VPAR,        TT_vals,      OPT_PARAM_vals, Zs, ms_max);
             % toc
 %% 
             %Extract C values directly from grids
