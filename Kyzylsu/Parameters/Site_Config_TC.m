@@ -1,6 +1,6 @@
 %% SITE CONFIGURATION - Kyzylsu
 % Read by Launcher_Dev_Distributed.m with run(); defines the structure CONFIG_vals.
- Empty values ([]) mean "not set".
+% Empty values ([]) mean "not set".
 % On the HPC, another config file can be used without editing the launcher:
 %   export TC_CONFIG=Kyzylsu/Parameters/<other_config>.m   (in the job script, before matlab)
 
@@ -14,9 +14,9 @@ CONFIG_vals.UTM_zone      = 42;     % UTM zone for catchment
 CONFIG_vals.UTM_zone_text = '42 N'; % UTM zone for catchment (text)
 
 %% Run period and output folder
-CONFIG_vals.Run_StartDate = datetime(2021,10,1, 0,0,0); % Run start date and time (year,month,day, hour,min,sec)
-CONFIG_vals.Run_EndDate   = datetime(2021,10,1, 3,0,0); % Run end date and time (last time step)
-CONFIG_vals.Run_Folder    = 'Kyzylsu_Run_02';           % Name of output run folder
+CONFIG_vals.Run_StartDate = datetime(2021,10,01, 0,0,0); % Run start date and time (year,month,day, hour,min,sec)
+CONFIG_vals.Run_EndDate   = datetime(2022,09,30, 23,0,0); % Run end date and time (last time step)
+CONFIG_vals.Run_Folder    = 'Kyzylsu_Run_01';           % Name of output run folder
 
 %% Restart
 CONFIG_vals.Restart_ID   = 0;                % 0 = new run, 1 = continue an unfinished run from its checkpoint
