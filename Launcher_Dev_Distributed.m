@@ -1402,6 +1402,8 @@ for t=t_start:N_time_step
         % =================================================================
         
         if MASKn(ij)== 1
+	    try % report which cell fails (see catch at the end of the cell block)
+
             %disp(['Cell: ' char(num2str(ij)) ', Veg Type: ' char(num2str(ksv(ij)))])
             Elev=DTMn(ij);
             %%
@@ -1581,8 +1583,20 @@ for t=t_start:N_time_step
 
     %end
     
-        end
+          catch ME
+            [r_err, c_err] = ind2sub([m_cell n_cell], ij);
+            if isempty(ME.stack)
+                where_err = 'unknown location';
+            else
+                where_err = sprintf('%s, line %d', ME.stack(1).name, ME.stack(1).line);
+            end
+            msg_err = sprintf(['Cell ij = %d (row %d, col %d), elevation %.0f m, class %d, ' ...
+                'model date %04d-%02d-%02d %02d:00\n%s\n(in %s)'], ...
+                ij, r_err, c_err, DTMn(ij), ksv(ij), Datam_S(1:4), ME.message, where_err);
+            error('TC:cellFailed', '%s', msg_err);
+          end
     end
+end
     
 %% END OF PARFOR
 %======================================================================
