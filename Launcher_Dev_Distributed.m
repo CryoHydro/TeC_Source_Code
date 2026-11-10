@@ -87,7 +87,7 @@ Directories.PreProc = [site_name '/Preprocessing/OUTPUTS/' CONFIG_vals.PreProc_f
 dtm_file = CONFIG_vals.dtm_file;
 
 % Sub-path points of interest for discharge and multipoints
-Directories.POIs = [site_name '/Preprocessing/OUTPUTS/']; %POI_dtm_Site_50m.txt
+Directories.POIs = [Directories.PreProc 'POI_' erase(dtm_file,'.mat') '.txt']; % POI_dtm_<Site>_<res>m.txt from the preprocessing (next to the dtm)
 Directories.Multi = [site_name '/Multipoint/OUTPUTS/' site_name '_MultiPoints.txt'];
 
 % Dependencies
@@ -161,7 +161,34 @@ UTM_X = x(floor(length(x)/2));
 
 % Load point data for saving
 %--------------------------------------------------------------------
-Points = readtable(Directories.Multi); %import table with points info
+% POI file written by the preprocessing together with the dtm
+% (POI_dtm_<Site>_<res>m.txt, with at least the columns Name, col, row, idx)
+if ~isfile(Directories.POIs)
+    error('POI file not found: %s', Directories.POIs)
+end
+Points = readtable(Directories.POIs,'Delimiter',',');
+% Column names differ between sites (e.g. name/Name): use Name, col, row, idx
+vn = Points.Properties.VariableNames;
+for c = {'Name','col','row','idx'}
+    k = find(strcmpi(vn,c{1}),1);
+    if isempty(k); error('Column "%s" missing in %s', c{1}, Directories.POIs); end
+    Points.Properties.VariableNames{k} = c{1};
+end
+Points.Name = strtrim(string(Points.Name));
+clear vn c k
+disp(['Points: ' num2str(height(Points)) ' POIs read from ' Directories.POIs])
+% Consistency with the loaded dtm
+if any(Points.idx ~= sub2ind([m_cell n_cell], Points.row, Points.col))
+    error('POI file: idx does not match row/col for the grid of %s', dtm_file)
+end
+
+% Remove points outside the catchment mask (no simulated cell there)
+out_mask = MASK(Points.idx) ~= 1;
+if any(out_mask)
+    warning('Points outside MASK removed: %s', strjoin(Points.Name(out_mask),', '))
+    Points(out_mask,:) = [];
+end
+clear out_mask
 UTM_zone = CONFIG_vals.UTM_zone;
 
 % names of points
