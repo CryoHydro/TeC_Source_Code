@@ -522,7 +522,7 @@ Ohy_OUT  = reshape(Ohy_OUT,num_cell,1);
 %Reshape soil variables
 PSANr=reshape(PSAN/100,num_cell,1); %PSAN comes in here as a %,converted to a fraction (0 to 1)
 PCLAr=reshape(PCLA/100,num_cell,1); %PCLA comes in here as a %,converted to a fraction (0 to 1)
-if max(max(PORG>40)) %Presume PORG in g/kg not %
+if max(max(PORG))>40 %Presume PORG in g/kg not %
     PORGr=reshape(PORG/1000,num_cell,1);
 else %PORG brought in as % 
     PORGr=reshape(PORG/100,num_cell,1);
