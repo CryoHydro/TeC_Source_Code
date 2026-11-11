@@ -48,7 +48,7 @@ IniCond.run_folder = CONFIG_vals.Run_Folder; %Define folder to save outputs
 % Model structure choices
 %========================================================================
 
-OPT_Forcing = CONFIG_vals.OPT_Forcing; %Choose type of forcing, 1= from AWS which is distributed, 2= fully gridded
+OPT_Forcing = CONFIG_vals.OPT_Forcing; %Choose type of forcing, 1= from AWS which is distributed, 2= fully gridded, 3= on-the-fly downscaling, 4= user forcing function (maps built at each time step)
 OPT_Veg_Param = CONFIG_vals.OPT_Veg_Param; %Choose if vegetation parameters (for Ccrown, Cwat, Crock, Curb, Cbare) are one value per landcover type (1), or gridded and variable per landcover (2). 
 %For 1 change the values in VPAR_T directly, for 2 provide the grids in the
 %dtm_file. Note for 2 you still need the table to read the Veg_type names
@@ -75,6 +75,8 @@ Directories.forc_meteo = [Directories.forc '/Bias_corrected/' CONFIG_vals.forc_m
 Directories.forc_meteoOD = [Directories.forc '/Output_Downscaling/' CONFIG_vals.forc_meteo_folder '/'];
 elseif OPT_Forcing == 3
 meteo_name = CONFIG_vals.forc_meteo_name; %e.g. 'Hybas_Lvl7_Catchment_2070497830_250m'
+elseif OPT_Forcing == 4
+forc_function = CONFIG_vals.forc_function; %Name of the user forcing function, e.g. 'Kyzylsu_forcing' (file <site>/Forcing/Kyzylsu_forcing.m)
 end
 
 % Parameters
@@ -736,6 +738,28 @@ elseif OPT_Forcing == 3
     % Set output grids to be the dem grid resolutions (default are provided
     % bias-correction locations if not)
     dsGRID.dsLats = dsGRID.demLats; dsGRID.dsLons = dsGRID.demLons; dsGRID.dsZs = dsGRID.demZs;
+
+%========== User forcing function (maps built at each time step) ======
+% The function (on the path, e.g. in <site>/Forcing) is called with:
+%   Forc_data = fun('load', Directories.forc)          once, loads the user data
+%   F = fun('maps', Forc_data, Date_t, Forc_grid)       at each time step
+% F must contain Ta [C], Pr [mm per time step], U [RH, fraction or %], N [W m-2],
+% Ws [m s-1], Pre [hPa or Pa], SAB1, SAB2, SAD1, SAD2, PARB, PARD [W m-2, flat
+% surface: the terrain correction is applied here], and optionally Tdew [C].
+% Each is a scalar (same value in all cells) or a vector of num_cell values.
+elseif OPT_Forcing == 4
+    t_bef = CONFIG_vals.t_bef;
+    t_aft = CONFIG_vals.t_aft;
+    if exist(forc_function,'file') ~= 2
+        error('Forcing function not found on the path: %s', forc_function)
+    end
+    forc_fun = str2func(forc_function);
+    Forc_data = forc_fun('load', Directories.forc);
+    % Grids given to the forcing function (cell vectors, same order as the model)
+    Forc_grid = struct('DTM',DTMn, 'MASK',MASKn, 'GLH',GLHn, 'DEB_MAP',DEB_MAPn, ...
+        'num_cell',num_cell, 'cellsize',cellsize, 'x',x_cell, 'y',y_cell);
+    forc_vars_4 = {'Ta','Pr','U','N','Ws','Pre','SAB1','SAB2','SAD1','SAD2','PARB','PARD'};
+    disp(['Forcing: user function ' forc_function ' (maps built at each time step)'])
 end
 
 % Solar variables (just for Lmax_day)
@@ -780,10 +804,15 @@ for t=t_start:N_time_step
     %======================================================================      
 
     %So create new data every month
-    if ~exist('Ta_S', 'var') || str2num(yy) ~= year_loaded || str2num(mth) ~= month_loaded
+    %For OPT_Forcing = 4 the forcing is built at every time step (one hour only)
+    if OPT_Forcing == 4 || ~exist('Ta_S', 'var') || str2num(yy) ~= year_loaded || str2num(mth) ~= month_loaded
+    if OPT_Forcing == 4
+    date_forMonth = Date(t-1); % Only the hour of this time step
+    else
     date_forMonth = Date_generator(str2double(yy),str2double(mth)); % Hours of this month, used to select the forcing
 
-    disp(['New forcing loaded for period: ' char(num2str(yy)) '-' char(num2str(mth)) ])    
+    disp(['New forcing loaded for period: ' char(num2str(yy)) '-' char(num2str(mth)) ])
+    end
 
     %  ===== For weather station point =========
     if OPT_Forcing == 1
@@ -949,6 +978,49 @@ for t=t_start:N_time_step
         if max(max(Pre_S))>10000
         Pre_S = Pre_S./100; %Convert from Pascals to mbar/hectopascal
         end
+    end
+
+    %========= User forcing function (one time step) ========
+    if OPT_Forcing == 4
+        size_time_in_month = 1;
+        F = forc_fun('maps', Forc_data, date_forMonth, Forc_grid);
+        if ~isfield(F,'Tdew'); forc_list = forc_vars_4; else; forc_list = [forc_vars_4 {'Tdew'}]; end
+        for v = 1:numel(forc_list)
+            if ~isfield(F,forc_list{v})
+                error('Forcing function %s: variable %s missing', forc_function, forc_list{v})
+            end
+            val = double(F.(forc_list{v})(:))'; % row vector (time x cells)
+            if isscalar(val)
+                val = repmat(val,1,num_cell); % same value in all cells
+            elseif numel(val) ~= num_cell
+                error('Forcing function %s: %s has %d values, expected 1 or %d', forc_function, forc_list{v}, numel(val), num_cell)
+            end
+            F.(forc_list{v}) = val;
+        end
+        Ta_S = F.Ta; Pr_S = F.Pr; U_S = F.U; N_S = F.N; Ws_S = F.Ws; Pre_S = F.Pre;
+        SAB1_S = F.SAB1; SAB2_S = F.SAB2; SAD1_S = F.SAD1; SAD2_S = F.SAD2; PARB_S = F.PARB; PARD_S = F.PARD;
+
+        %Corrections (as for OPT_Forcing = 2)
+        if max(U_S(MASKn==1))>1
+            U_S = U_S./100; %Turn into fraction
+        end
+        U_S(U_S>1) = 1; U_S(U_S<0) = 0; %Between 0 and 100%
+        Ws_S(Ws_S < 0.01) = 0.01; %To prevent 0 turbulent fluxes
+        Pr_S(Pr_S < 0) = 0;
+        if max(Pre_S(MASKn==1))>10000
+            Pre_S = Pre_S./100; %Convert from Pascals to mbar/hectopascal
+        end
+
+        %Dew point temperature: from the function, or from Ta and U (same formula as OPT_Forcing = 1)
+        if isfield(F,'Tdew')
+            Tdew_S = F.Tdew;
+        else
+            a=17.27; b=237.3;
+            xr = a.*Ta_S./(b+Ta_S) + log10(U_S);
+            Tdew_S = b.*xr./(a-xr);
+            clear a b xr
+        end
+        clear F val v forc_list
     end
 
 %========= Further forcing steps for all types ==========
