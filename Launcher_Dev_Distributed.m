@@ -85,12 +85,12 @@ Directories.Optpar = [site_name '/Parameters/Options_and_NoVegParams.xlsx'];
 Directories.VPAR = [site_name,'/Parameters/VPAR_T.xlsx'];
 
 % Preprocessing information
-Directories.PreProc = [site_name '/Preprocessing/OUTPUTS/' CONFIG_vals.PreProc_folder '/']; 
+Directories.PreProc = [site_name '/Preprocessing/OUTPUTS/' CONFIG_vals.PreProc_folder '/']; % TOM'S FORMAT IS Directories.PreProc = [site_name '/Grids/']; 
 dtm_file = CONFIG_vals.dtm_file;
 
 % Sub-path points of interest for discharge and multipoints
 Directories.POIs = [Directories.PreProc 'POI_' erase(dtm_file,'.mat') '.txt']; % POI_dtm_<Site>_<res>m.txt from the preprocessing (next to the dtm)
-Directories.Multi = [site_name '/Multipoint/OUTPUTS/' site_name '_MultiPoints.txt'];
+Directories.Multi = [site_name '/Multipoint/OUTPUTS/' site_name '_MultiPoints.txt'];   % TOM'S FOLDER FORMAT WITHOUT 'OUTPUTS' SUB DIRECTORY
 
 % Dependencies
 addpath(genpath('Functions')); % Where are distributed model set-up files (needed ? yes to load dtm)
@@ -224,15 +224,9 @@ OPT_PARAM_vals = OPT_PARAM_vals(:,2:end); %Just removed 'values' column
 OPT_PARAM_vals.Properties.VariableNames = OPT_PARAM{:,1}; %Give variable names the parameter names
 OPT_PARAM_vals = table2struct(OPT_PARAM_vals); %Ok can now get to values using a structure notation :)
 
-OPT_ALLOME = OPT_PARAM_vals.OPT_ALLOME; %% Option for vegetation - structural attributes?
-OPT_EnvLimitGrowth = OPT_PARAM_vals.OPT_EnvLimitGrowth; %Option for introducing Environmental Limitation of Growth
-OPT_FR_SOIL = OPT_PARAM_vals.OPT_FR_SOIL; % Option for freezing soil
-OPT_HEAD = OPT_PARAM_vals.OPT_HEAD; %% Option for determining routing method
-OPT_PlantHydr = OPT_PARAM_vals.OPT_PlantHydr; %Option for including Plant Hydrualic
-OPT_SoilBiogeochemistry = OPT_PARAM_vals.OPT_SoilBiogeochemistry; % Option for including Soil Biochemistry
-OPT_SoilTemp = OPT_PARAM_vals.OPT_SoilTemp; % Option for computing soil temperature or not
-OPT_VCA = OPT_PARAM_vals.OPT_VCA; %% Option for vegetation 
-OPT_VegSnow = OPT_PARAM_vals.OPT_VegSnow; % Option for computing energy budget of vegetation when there is snow at the ground
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+v2struct(OPT_PARAM_vals); % Only need this. No need to restate any other parameters from the loaded Excel configs/params
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %---------------------------------------------------------------------
 % 2. Vegetation parameters
@@ -398,17 +392,17 @@ copyfile(Directories.config,[Directories.save 'Parameters/' 'Site_Config_TC.m'])
 % 3. Glacier and snow parameters
 % --------------------------------------------------------------------------
 
-%Tmod parameters
-OPT_Tmod = OPT_PARAM_vals.OPT_Tmod;
-if OPT_Tmod == 0 %No Tmod applied
-    TmodB = 0;
-elseif OPT_Tmod == 1 %Simple bias correction
-    TmodB = OPT_PARAM_vals.TmodB; %Tmod bias (positive reduces temperature over ice)
-elseif OPT_Tmod == 2 %Uses a relationship with optional bias correction 
-    TmodB = OPT_PARAM_vals.TmodB; %Tmod bias (positive reduces temperature over ice)
-    TmodM = OPT_PARAM_vals.TmodM; %Tmod multiplier
-    TmodC = OPT_PARAM_vals.TmodC; %Tmod coefficent
-end
+% %Tmod parameters
+% OPT_Tmod = OPT_PARAM_vals.OPT_Tmod;
+% if OPT_Tmod == 0 %No Tmod applied
+%     TmodB = 0;
+% elseif OPT_Tmod == 1 %Simple bias correction
+%     TmodB = OPT_PARAM_vals.TmodB; %Tmod bias (positive reduces temperature over ice)
+% elseif OPT_Tmod == 2 %Uses a relationship with optional bias correction 
+%     TmodB = OPT_PARAM_vals.TmodB; %Tmod bias (positive reduces temperature over ice)
+%     TmodM = OPT_PARAM_vals.TmodM; %Tmod multiplier
+%     TmodC = OPT_PARAM_vals.TmodC; %Tmod coefficent
+% end
 
 % Glacier dynamics and avalanching
 OPT_Idyn = OPT_PARAM_vals.OPT_Idyn; % Switch for glacier dynamics
@@ -427,11 +421,11 @@ parameterize_phase_labels = {'2-Ta','Ding','1-Ta','Pomeroy','Wang','Jennings'};
 parameterize_phase_label = parameterize_phase_labels(parameterize_phase.OPT_Pr_Part);
 
 %Multilayer snowpack parameters
-hSTL = OPT_PARAM_vals.hSTL; % Skin layer thickness for the 2-layer snowpack module
-min_SPD = OPT_PARAM_vals.min_SPD;  %% [m] minimum snow pack depth to have a multilayer snow 
+% hSTL = OPT_PARAM_vals.hSTL; % Skin layer thickness for the 2-layer snowpack module
+% min_SPD = OPT_PARAM_vals.min_SPD;  %% [m] minimum snow pack depth to have a multilayer snow 
 
 % Choice of the snow albedo scheme Evars_load
-OPT_Albsno = OPT_PARAM_vals.OPT_Albsno; % 3 doesn't work, 4 is Brock 2000, 5 is Ding 2017
+% OPT_Albsno = OPT_PARAM_vals.OPT_Albsno; % 3 doesn't work, 4 is Brock 2000, 5 is Ding 2017
 
 % Glacier set up
 if OPT_Idyn == 0
@@ -449,14 +443,14 @@ GLA_ID(GLH==0) = NaN;
 DTM_Bedrock = DTM_orig-GLH; 
 
 % Firn albedo - Albedo vs Elevation
-OPT_Alb_v_el = OPT_PARAM_vals.OPT_Alb_v_el; %Switch for using firn albedo versus elevation
-Aice = OPT_PARAM_vals.Aice; %Aice, Artesonraju % 0.2314 Shallap point value
-Amax = OPT_PARAM_vals.Amax; %Max 'firn' albedo value
+% OPT_Alb_v_el = OPT_PARAM_vals.OPT_Alb_v_el; %Switch for using firn albedo versus elevation
+% Aice = OPT_PARAM_vals.Aice; %Aice, Artesonraju % 0.2314 Shallap point value
+% Amax = OPT_PARAM_vals.Amax; %Max 'firn' albedo value
 
 if OPT_Alb_v_el==1
 
-    Alb_v_el_MM = OPT_PARAM_vals.Alb_v_el_MM; %Yota remote sensing slope for 25% lowest scenes
-    Alb_v_el_CC = OPT_PARAM_vals.Alb_v_el_CC; %Yota remote sensing intercept for 25% lowest scenes
+    % Alb_v_el_MM = OPT_PARAM_vals.Alb_v_el_MM; %Yota remote sensing slope for 25% lowest scenes
+    % Alb_v_el_CC = OPT_PARAM_vals.Alb_v_el_CC; %Yota remote sensing intercept for 25% lowest scenes
 
     Afirn = (DTM.*Alb_v_el_MM) + Alb_v_el_CC; %Construct initial relationship
     Afirn(Afirn<Aice)=Aice; %Prevent values lower than Aice
@@ -476,7 +470,7 @@ end
 % Check if initial snow albedo is given - this goes into initial conditions as SNOWALB
 %SNOWD is taken directly and used in intial conditions as initial snow depth
 if ~exist('SNOWALB','var')
-    Ini_Asnow = OPT_PARAM_vals.Ini_Asnow;
+    % Ini_Asnow = OPT_PARAM_vals.Ini_Asnow;
     SNOWALB = SNOWD;
     SNOWALB(SNOWD>0) = Ini_Asnow;
 end 
@@ -486,6 +480,8 @@ end
 %-------------------------------------------------------------------------
 
 load('Ca_Data.mat');
+% load([meteo_name '_Ca_Data.mat']); % TOM's FILE NAMING HAS SITE IN IT - PROVIDED BY THE PRE_PROCESSING SCRIPTS AT STEP 3
+
 d1 = find(abs(Date_CO2-datenum(Date(1)))<1/36);d2 = find(abs(Date_CO2-datenum(Date(end)))<1/36);
 Ca=Ca(d1:d2);
 clear d1 d2 Date_CO2 id_df
@@ -550,8 +546,8 @@ SPRINGn =SNn; %% Spring Location
 %--------------------------------------------------------------------------
 
 %Soil layers and albedo
-rho_g = OPT_PARAM_vals.rho_g; %%% Spatial Albedo - this is quite high??
-md_max = OPT_PARAM_vals.md_max; % Number of debris layers
+% rho_g = OPT_PARAM_vals.rho_g; %%% Spatial Albedo - this is quite high??
+% md_max = OPT_PARAM_vals.md_max; % Number of debris layers
 
 %Soil parameters spatial
 Pss = [800]; Pwp = [3500]; %% [kPa]
@@ -580,12 +576,12 @@ end
 %Zs_OUT=800*ones(num_cell,1);
 
 %  ---  Set Soil thickness and related params ---
-OPT_soil_th = OPT_PARAM_vals.OPT_soil_th;
+% OPT_soil_th = OPT_PARAM_vals.OPT_soil_th;
 %First Zs and the number of soil layers is based on the maximum soil depth
 Zs_all = [0 10 20 50 100 150 200 250 300 350 500 1000 1500 2000 2500 3000 3500 4000 4500]; %All potential soil depths (ms_max +1)
 vi_all = [0 10 20 50 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100]; %All potential initial soil moistures (ms_max +1)
 if OPT_soil_th == 1
-    soil_th_max = OPT_PARAM_vals.soil_th_max; %Max soil thickness, mm
+    % soil_th_max = OPT_PARAM_vals.soil_th_max; %Max soil thickness, mm
     Zs = Zs_all(Zs_all<=soil_th_max);
     vi = vi_all(Zs_all<=soil_th_max);
     ms_max = size(Zs,2) - 1;
@@ -721,23 +717,85 @@ t_aft = CONFIG_vals.t_aft;
 
 %========== For On The Fly distributed forcing ======
 elseif OPT_Forcing == 3
-    %Load data
+    % -------------------------------------------------------------------------
+    % LOAD AND ADJUST ERA5-LAND INPUTS
+    % -------------------------------------------------------------------------
     OPT_Run_BC = CONFIG_vals.OPT_RunBC;
     dsERA = load([meteo_name '_ERAdata.mat']);
+    % Ensure alignment of ERA data to model run period
+    [~,ia,ib] = intersect(Date,dsERA.dateTimes);
+    FN = fieldnames(dsERA);
+    for vv = 1:length(FN)
+        if length(size(dsERA.(FN{vv})))==3
+            dsERA.(FN{vv}) = dsERA.(FN{vv})(:,:,ib);
+        end
+    end
+    dsERA.dateTimes = dsERA.dateTimes(ib);
+    dsERA.TLR = dsERA.TLR(ib);
+
+    % -------------------------------------------------------------------------
+    % LOAD AND ADJUST DEM GRID DATA FOR DOWNSCALING USE
+    % -------------------------------------------------------------------------    
     dsGRID = load([meteo_name '_GRIDdata.mat']);
-    dsCoeff = load([meteo_name '_BC_Coefficients.mat']);
-    dim = 'grid';
+    dsGRID = rmfield(dsGRID,{'dsLats','dsLons','dsZs','dsNames'});  % will remove later
+
+    nYr = years(Date(end)-Date(1)); 
+    [~,ia,ib] = intersect(dsERA.dateTimes,Date);
+    dsERA.tpMean = nansum(dsERA.tp(:,:,ia),3)/nYr;
+    
+    dsERA.tpLr = 0.0003; % NEWER VERSIONS HAVE THIS ALREADY INSIDE dsERA.   SO COULD REMOVE IN FUTURE
+    
     n = 1500;
-    demCurv = getcurvature(dsGRID.demZs,n);
+    dsGRID.demCurv = getcurvature(dsGRID.demZs,n);
     dsGRID.pixelSize = abs(dsGRID.demLats(1,1)-dsGRID.demLats(2,1))*111.1e3; % (m)
     [dsGRID.demSlope,dsGRID.demAspect] = slopeaspect(dsGRID.demZs,dsGRID.pixelSize);
-    % Precipitation gradient + Mean Annual Precipitation
-    dsERA.tpLr = 0.003; % Precipitation gradient (mm yr-1 m-1) - CAREFUL - should this be a param?
-    nYrs = years(Date(end)+(hours(1)) - Date(1));
-    dsERA.tpMean = nansum(dsERA.tp,3)/nYrs;
-    % Set output grids to be the dem grid resolutions (default are provided
-    % bias-correction locations if not)
-    dsGRID.dsLats = dsGRID.demLats; dsGRID.dsLons = dsGRID.demLons; dsGRID.dsZs = dsGRID.demZs;
+
+    load([meteo_name '_BC_Coefficients.mat']);
+
+    % -------------------------------------------------------------------------
+    % CONFIGURATION FIELDS FOR ON-THE-FLY GRID DOWNSCALING
+    % -------------------------------------------------------------------------
+    cfg.runMode = 'OTF';   %  'OTF' or 'save'
+    cfg.dim = 'grid';   %  'grid', 'cluster', or 'points'
+    cfg.DoubleOutput = 1;  % output both downscaled AND bias-corrected data (if relevant)
+    cfg.RunRadiationPartition = 1; % If desire to run radiation partition. 1 = yes
+    cfg.Date = Date;  % datetime vector at hourly resolution
+    cfg.UTC = IniCond.DeltaGMT;
+    cfg.VarNames = {'TA','RH','PP','FF','SWIN','LWIN','PRESS'}; % cell array, e.g. {'TA','RH','PP','SWIN','FF'}
+    cfg.VarDS = {'dsT2m','dsRH','dsTp','dsWs10','dsSsrd','dsStrd','dsSp'};  % output field names corresponding to VarNames
+    cfg.VarOut =  {'Ta','RH','Pr','Ws','Swin','N','Pre'};  % output field names corresponding to VarNames 
+    cfg.FullNames = {'Air Temperature','Relative Humidity','Precipitation','Wind Speed','Shortwave Radiation','Longwave Radiation','Air Pressure'}; % display names corresponding to VarNames
+    
+    cfg.dsLats = [];         %: grid latitudes
+    cfg.dsLons = [];       %: grid longitudes
+    cfg.dsZs =  [];      %: grid elevations
+    
+    cfg.RunBC = OPT_Run_BC;              % Run Bias Correction? 1 = yes
+    cfg.BC = COEFFS;             % structure containing monthly EQM information.
+    
+    cfg.bcLats = COEFFS.bcLats;         %: POI latitudes
+    cfg.bcLons = COEFFS.bcLons;       %: POI longitudes
+    cfg.bcZs = COEFFS.bcZs;          %: POI elevations
+
+    cfg.foOut = [];   % output directory (required if cfg.runMode = 'save')
+    
+    cfg.dsNames = [];        % point names, required for dim = 'points' and save
+    cfg.clusterNumber = [];  % cluster IDs, required for dim = 'cluster' and save
+    
+    cfg.precipLimit = 0.1; % precipLimit;    % precipitation threshold (mm hr); default 0.1   - Provide as parameter OPT?  
+    cfg.windMinimum = 0.1; % windMinimum;   % wind-speed minimum (m s-1); default 0.3;                - Provide as parameter OPT?
+    cfg.writeBiasCorr = true;  % optional logical; default true
+
+% 
+% 
+%     % Create radiation partition on ERA grid for initial t_bef/t_aft
+%     MidCell = [floor(size(dsERA.zs,1)/2),floor(size(dsERA.zs,2)/2)];
+%     GRAPH_VAR=0;
+%     [SD,SB,SAD1,SAD2,SAB1,SAB2,PARB,PARD,N,Rsws,t_bef,t_aft]=Automatic_Radiation_Partition_I(datenum(Date),Lat,Lon,...
+%         dsERA.zs(MidCell(1),MidCell(2)),IniCond.DeltaGMT,squeeze(dsERA.tp(MidCell(1),MidCell(2))),squeeze(dsERA.d2m(MidCell(1),MidCell(2),:)),...
+%         squeeze(dsERA.ssrd(MidCell(1),MidCell(2),:)),GRAPH_VAR);
+% clear N Rsws
+
 
 %========== User forcing function (maps built at each time step) ======
 % The function (on the path, e.g. in <site>/Forcing) is called with:
@@ -980,6 +1038,72 @@ for t=t_start:N_time_step
         end
     end
 
+     %========= On-The_Fly Downscaling ========
+    if OPT_Forcing == 3
+
+    StartMonth = datetime(str2double(yy),str2double(mth),1,0,0,0,0); % Derive the monthly timesteps
+        EndMonth = dateshift(StartMonth,'end','month'); EndMonth = EndMonth + hours(23);
+        Forcing_Date = StartMonth:hours(1):EndMonth; Forcing_Date = Forcing_Date';
+
+    dsERAsub = dsERA; % Make a copy of the ERA5 data
+    [~,ia,ib] = intersect(Forcing_Date,dsERA.dateTimes); % Find the overlapping timesteps
+     FN = fieldnames(dsERAsub); % get field names from the ERA5 data structure
+
+     % %%%%% A SUB-TIMING TEST DUE TO A SLOW RADIATION PARTITION
+     % ib = 1:48; 
+     % cfg.Date = Date(1:48);
+     % cfg.RunRadiationPartition = 0;
+     % %%%%
+
+    for vv = 1:length(FN) % Adjust the timesteps on the 3D matrices
+        if length(size(dsERAsub.(FN{vv})))==3
+            dsERAsub.(FN{vv}) = dsERAsub.(FN{vv})(:,:,ib);
+        end
+    end
+    % adjust the timing of the date itself and the lapse rates
+    dsERAsub.dateTimes = dsERAsub.dateTimes(ib);
+    dsERAsub.TLR = dsERAsub.TLR(ib);
+    
+    % MAIN DOWNSCALING CODE
+    %--------------------
+    OTF = downscale_4_T_C(cfg,dsERAsub,dsGRID);
+    %--------------------
+
+    try % Open structure containing bias-corrected fields. If no bias correction is found /or applied, the non-bias-corrected files are opened from the structure
+        FN = fieldnames(OTF.biasCorrected);
+        for ff = 1:length(FN)
+            [m,n,q] = size(OTF.biasCorrected.(FN{ff}));
+            OTF.biasCorrected.(FN{ff}) = transpose(reshape(flipud(OTF.biasCorrected.(FN{ff})),[m*n,q]));
+        end
+        v2struct(OTF.biasCorrected) % this v2struct should stay ideally
+    catch
+        FN = fieldnames(OTF.downscaled);
+        for ff = 1:length(FN)
+            [m,n,q] = size(OTF.downscaled.(FN{ff}));
+            OTF.downscaled.(FN{ff}) = transpose(reshape(flipud(OTF.downscaled.(FN{ff})),[m*n,q]));
+        end
+        v2struct(OTF.downscaled) % this v2struct should stay ideally
+    end
+
+    U_S = RH / 100;
+    % ADJUST OTHER NAMES HERE (FOR THE CURRENT WORKING CONVENTION) - (30/10/26)
+    Ta_S = Ta;
+    Pr_S = Pr;
+    Ws_S = Ws;
+    N_S = N;
+    Pre_S = Pre;
+    SAB1_S = SAB1;
+    SAB2_S = SAB2;
+    SAD1_S = SAD1;
+    SAD2_S = SAD2;
+    PARB_S = PARB;
+    PARD_S = PARD;
+   
+    Tdew_S = (243.12 .* (log(U_S) + (17.62 .* Ta_S)./(243.12 + Ta_S))) ./ ...
+     (17.62 - (log(U_S) + (17.62 .* Ta_S)./(243.12 + Ta_S)));
+
+    end
+
     %========= User forcing function (one time step) ========
     if OPT_Forcing == 4
         size_time_in_month = 1;
@@ -1023,49 +1147,39 @@ for t=t_start:N_time_step
         clear F val v forc_list
     end
 
-%========= Further forcing steps for all types ==========
+    %========= Further forcing steps for all types ==========
+OPT_Decouple = 1; % NEED TO ADD AS AN OPTION TO THE PARAM FILES
+    if OPT_Decouple == 1 
+
+    % Glacier Cooling Effect - Shaw et al. (2025)
+    load('ModelCoefficients_Decoupling.mat'); % Should be in 'Functions' path that is already generated
     
-    % ----- Apply Tmod ----------
-    % This is applied to whole month - note this is based on initial ice thickness
-    OPT_Tmod = OPT_PARAM_vals.OPT_Tmod;
-    %If OPT_Tmod = 0 then no change
+    SpecHum = convert_humidity(Pre_S*100,Ta_S+273.15,U_S*100,'relative humidity','specific humidity');
+    
+    D = DTM(:)'; F = FPL(:)'; % NEED TO CHANGE ORIENTATION OF GRIDS?
 
-    if OPT_Tmod == 1
-    idcli = GLHn>0 & DEB_MAPn == 0; %Clean ice only
-    idcli_r = repmat(idcli',size_time_in_month,1);
-    idTa = Ta_S>0;  %Apply when >0
-    idapply = idTa & idcli_r; %So where Temp threshold exceeded and over clean ice
-    Ta_S(idapply) = Ta_S(idapply) - TmodB; %Only remove bias
-    Tdew_S(idapply) = TdewS(idapply) - TmodB; %Also apply to Tdew
+    for tt = 1:size(Ta_S,1)
+        if min(Swin(tt,:),[],'all') > 30 % day time only (without very overcast conditions)
+        
+        T = Ta_S(tt,:); S = SpecHum(tt,:); FF = Ws_S(tt,:); Td = Tdew_S(tt,:);
+        K = predict(DECOUPLE_COEFF,[T',S',FF',F',D'])'; % Add into prediction as vector (nx1)
 
-    %Use the corrected tempratures to derive relative humidity
-    c=237.3; b=17.27;
-    U_S = 100*exp((c*b.*(Tdew_S - Ta_S))./((c+Ta_S).*(c+Tdew_S)));
-    clear c b 
-    if max(max(U_S))>=1
-    U_S = U_S./100; %Turn into fraction
-    U_S(U_S>1) = 1; %Cannot be more than 100%
+        ValidCooling = ~isnan(F) & ~isnan(D) & T > 0;
+
+        Td(ValidCooling) = T(ValidCooling) .* K(ValidCooling);      
+            T(ValidCooling) = T(ValidCooling) .* K(ValidCooling);
+                  
+        Ta_S(tt,:) = T;
+        Tdew_S(tt,:) = Td;
+
+        end
     end
 
-    elseif OPT_Tmod ==2
-    idcli = GLHn>0 & DEB_MAPn == 0; %Clean ice only
-    idcli_r = repmat(idcli',size_time_in_month,1);
-    Ta_S(idcli_r) = Ta_S(idcli_r) - TmodB; %So remove bias first (over clean ice)
-    Tdew_S(idcli_r) = Tdew_S(idcli_r) - TmodB; %Also apply to Tdew
-    idTa = Ta_S>0;  %Apply multiplier when >0
-    idapply = idTa & idcli_r; %So where Temp threshold exceeded and over clean ice
-    Ta_S(idapply) = Ta_S(idapply).*TmodM; %Apply Tmod multiplier
-    Tdew_S(idapply) = Tdew_S(idapply).*TmodM; %Apply Tmod multiplier
+    % Reconvert to relative humidity (and fraction)
+    U_S = exp((237.3*17.227.*(Tdew_S - Ta_S))./((237.3+Ta_S).*(237.3+Tdew_S))); 
 
-    %Use the corrected tempratures to derive relative humidity
-    c=237.3; b=17.27;
-    U_S = 100*exp((c*b.*(Tdew_S - Ta_S))./((c+Ta_S).*(c+Tdew_S)));
-    clear c b 
-    if max(max(U_S))>=1
-    U_S = U_S./100; %Turn into fraction
-    U_S(U_S>1) = 1; %Cannot be more than 100%
     end
-    end
+
 
     % Vapor pressure - calculate based on distributed Ta and U
     % esat/ea/Ds/Tdew grids of month of time x cell
@@ -1189,295 +1303,28 @@ for t=t_start:N_time_step
     %======================================================================
    
     if t == 2
-        % General vegetation/hydrology
-        %------------------------------------------------------------------
-        alp_soil=	     alp_soiltm1;
-        b_soil=          b_soiltm1;
-        Bam=             Bamtm1;
-        Bem=             Bemtm1;
-        BLit=            BLittm1;
-        Ccrown_t=	     Ccrown_t_tm1;
-        Cice=            Cicetm1;
-        Cicew=           Cicewtm1;
-        CK1=             CK1tm1;
-        Csno=            Csnotm1;
-        Csnow=           Csnowtm1;
-        dQ_S=            dQ_Stm1;
-        DQ_S=            DQ_Stm1;
-        dQVEG=           dQVEGtm1;
-        DT_S=            DT_Stm1;
-        dw_SNO=          dw_SNOtm1;
-        e_sno=           e_snotm1;
-        EG=              EGtm1;
-        EICE=            EICEtm1;
-        EIn_rock=	     EIn_rocktm1;
-        EIn_urb=	     EIn_urbtm1;
-        EK=              EKtm1;
-        ELitter=	     ELittertm1;
-        er=              ertm1;
-        ESN_In=          ESN_Intm1;
-        SSN_In =         SSN_Intm1;
-        ESN=             ESNtm1; 
-        SSN=             SSNtm1;  
-        EWAT=            EWATtm1;
-        FROCK=           FROCKtm1;
-        f=               ftm1;
-        Gfin=            Gfintm1;
-        G=               Gtm1;
-        H=               Htm1;
-        HV=              HVtm1;
-        ICE_D=           ICE_Dtm1;
-        ICE=             ICEtm1;
-        Imelt=           Imelttm1;
-        In_H=            In_Htm1;
-        In_Litter=	     In_Littertm1;
-        In_L=            In_Ltm1;
-        In_rock=	     In_rocktm1;
-        In_SWE=          In_SWEtm1;
-        In_urb=          In_urbtm1;
-        IP_wc=           IP_wctm1;
-        Lk_rock=	     Lk_rocktm1;
-        Lk_wat=          Lk_wattm1;
-        Lk=              Lktm1;
-        Lpho=            Lphotm1;
-        NavlI=           NavlItm1;
-        NDVI=            NDVItm1;
-        NIce=            NIcetm1;
-        NIn_SWE=	     NIn_SWEtm1;
-        OF=              OFtm1;
-        Oice=            Oicetm1;
-        OS=              OStm1;
-        O=               Otm1;
-        POT=             POTtm1;
-        Pr_liq=          Pr_liqtm1;
-        Pr_sno=          Pr_snotm1;
-        Q_channel=	     Q_channel;
-        Q_exit=          Q_exit;
-        q_runon=         q_runon;
-        QE=              QEtm1;
-        QEV=             QEVtm1;
-        Qfm=             Qfmtm1;
-        Qi_in=           Qi_in;
-        Qi_in_Ro=        Qi_out;
-        Qi_out_Rout=     Qi_out_Rout;
-        Qi_out=          Qi_outtm1;
-        Qsub_exit=	     Qsub_exit;
-        Qv=              Qvtm1;
-        r_litter=	     r_littertm1;
-        r_soil=          r_soiltm1;
-        ra=              ratm1;
-        Rd=              Rdtm1;
-        Rh=              Rhtm1;
-        Rn=              Rntm1;
-        ros=             rostm1;
-        SE_rock=	     SE_rocktm1;
-        SE_urb=          SE_urbtm1;
-        %Slo_head=	     Slo_head;
-        Smelt=           Smelttm1;
-        SND=             SNDtm1;
-        snow_albedo=     snow_albedotm1;
-        soil_albedo=     soil_albedotm1;
-        SP_wc=           SP_wctm1;
-        surface_albedo=  surface_albedotm1;
-        SWE=             SWEtm1;
-        SWE_avalanched=  SWE_avalanchedtm1;
-        t_sls=           t_slstm1;
-        tau_sno=	     tau_snotm1;
-        Tdamp=           Tdamptm1;
-        Tdeb=            Tdebtm1;
-        Tdp=             Tdptm1;
-        Tdp_snow =       Tdp_snowtm1;
-        Tice=            Ticetm1;
-        Tstm0=           Tstm0;
-        Ts=              Tstm1;
-        Ts_under =       Ts_undertm1;
-        TsVEG=           TsVEGtm1;
-        U_SWE=           U_SWEtm1;
-        Vice=            Vicetm1;
-        V=               Vtm1;
-        WAT=             WATtm1;
-        WIS=             WIStm1;
-        WR_IP=           WR_IPtm1;
-        WR_SP=           WR_SPtm1;
-        Ws_under=	     Ws_undertm1;
-        ZWT=             ZWTtm1;
-        
-        % Specifications for high & low vegetation
-        %------------------------------------------------------------------
-        AgeDL_H=	AgeDL_Htm1;
-        AgeDL_L=	AgeDL_Ltm1;
-        AgeL_H=     AgeL_Htm1;
-        AgeL_L=     AgeL_Ltm1;
-        AgePl_H=	AgePl_Htm1;
-        AgePl_L=	AgePl_Ltm1;
-        An_H=       An_Htm1;
-        An_L=       An_Ltm1;
-        ANPP_H=     ANPP_Htm1;
-        ANPP_L=     ANPP_Ltm1;
-        B_H=        B_Htm1;
-        B_L=        B_Ltm1;
-        BA_H=       BA_Htm1;
-        BA_L=       BA_Ltm1;
-        Bfac_dayH=	Bfac_dayHtm1;
-        Bfac_dayL=	Bfac_dayLtm1;
-        Bfac_weekH=	Bfac_weekHtm1;
-        Bfac_weekL=	Bfac_weekLtm1;
-        Ci_shdH=	Citm1_shdH;
-        Ci_shdL=	Citm1_shdL;
-        Ci_sunH=	Citm1_sunH;
-        Ci_sunL=	Citm1_sunL;
-        dflo_H=     dflo_Htm1;
-        dflo_L=     dflo_Ltm1;
-        Dr_H=       Dr_Htm1;
-        Dr_L=       Dr_Ltm1;
-        e_rel_H=	e_rel_Htm1;
-        e_rel_L=	e_rel_Ltm1;
-        e_relN_H=	e_relN_Htm1;
-        e_relN_L=	e_relN_Ltm1;
-        EIn_H=      EIn_Htm1;
-        EIn_L=      EIn_Ltm1;
-        fapar_H=	fapar_Htm1;
-        fapar_L=	fapar_Ltm1;
-        FNC_H=      FNC_Htm1;
-        FNC_L=      FNC_Ltm1;
-        gsr_H=      gsr_Htm1;
-        gsr_L=      gsr_Ltm1;
-        hc_H=       hc_Htm1;
-        hc_L=       hc_Ltm1;
-        In_H=       In_Htm1;
-        In_L=       In_Ltm1;
-        ISOIL_H=	ISOIL_Htm1;
-        ISOIL_L=	ISOIL_Ltm1;
-        Jsx_H=      Jsx_Htm1;
-        Jsx_L=      Jsx_Ltm1;
-        Jxl_H=      Jxl_Htm1;
-        Jxl_L=      Jxl_Ltm1;
-        Kleaf_H=	Kleaf_Htm1;
-        Kleaf_L=	Kleaf_Ltm1;
-        Kreserve_H=	Kreserve_Htm1;
-        Kreserve_L=	Kreserve_Ltm1;
-        Kuptake_H=	Kuptake_Htm1;
-        Kuptake_L=	Kuptake_Ltm1;
-        Kx_H=       Kx_Htm1;
-        Kx_L=       Kx_Ltm1;
-        LAI_H=      LAI_Htm1;
-        LAI_L=      LAI_Ltm1;
-        LAIdead_H=	LAIdead_Htm1;
-        LAIdead_L=	LAIdead_Ltm1;
-        ManIH=      ManIHtm1;
-        ManIL=      ManILtm1;
-        NBLeaf_H=	NBLeaf_Htm1;
-        NBLeaf_L=	NBLeaf_Ltm1;
-        NBLI_H=     NBLI_Htm1;
-        NBLI_L=     NBLI_Ltm1;
-        NPP_H=      NPP_Htm1;
-        NPP_L=      NPP_Ltm1;
-        NPPI_H=     NPPI_Htm1;
-        NPPI_L=     NPPI_Ltm1;
-        Nreserve_H=	Nreserve_Htm1;
-        Nreserve_L=	Nreserve_Ltm1;
-        NuLit_H=	NuLit_Htm1;
-        NuLit_L=	NuLit_Ltm1;
-        NupI_H=     NupI_Htm1;
-        NupI_L=     NupI_Ltm1;
-        Nuptake_H=	Nuptake_Htm1;
-        Nuptake_L=	Nuptake_Ltm1;
-        OH=         OHtm1;
-        OL=         OLtm1;
-        PARI_H=     PARI_Htm1;
-        PARI_L=     PARI_Ltm1;
-        PHE_S_H=	PHE_S_Htm1;
-        PHE_S_L=	PHE_S_Ltm1;
-        Preserve_H=	Preserve_Htm1;
-        Preserve_L=	Preserve_Ltm1;
-        Psi_l_H=	Psi_l_Htm1;
-        Psi_l_L=	Psi_l_Ltm1;
-        Psi_s_H=	Psi_s_Htm1;
-        Psi_s_L=	Psi_s_Ltm1;
-        Psi_x_H=	Psi_x_Htm1;
-        Psi_x_L=	Psi_x_Ltm1;
-        Puptake_H=	Puptake_Htm1;
-        Puptake_L=	Puptake_Ltm1;
-        RA_H=       RA_Htm1;
-        RA_L=       RA_Ltm1;
-        rap_H=      rap_Htm1;
-        rap_L=      rap_Ltm1;
-        RB_H=       RB_Htm1;
-        rb_H=       rb_Htm1;
-        RB_L=       RB_Ltm1;
-        rb_L=       rb_Ltm1;
-        Rdark_H=	Rdark_Htm1;
-        Rdark_L=	Rdark_Ltm1;
-        Rexmy_H=	Rexmy_Htm1;
-        Rexmy_L=	Rexmy_Ltm1;
-        Rg_H=       Rg_Htm1;
-        Rg_L=       Rg_Ltm1;
-        rKc_H=      rKc_Htm1;
-        rKc_L=      rKc_Ltm1;
-        Rmc_H=      Rmc_Htm1;
-        Rmc_L=      Rmc_Ltm1;
-        Rmr_H=      Rmr_Htm1;
-        Rmr_L=      Rmr_Ltm1;
-        Rms_H=      Rms_Htm1;
-        Rms_L=      Rms_Ltm1;
-        rNc_H=      rNc_Htm1;
-        rNc_L=      rNc_Ltm1;
-        rPc_H=      rPc_Htm1;
-        rPc_L=      rPc_Ltm1;
-        Rrootl_H=	Rrootl_Htm1;
-        Rrootl_L=	Rrootl_Ltm1;
-        rs_shdH=	rs_shdHtm1;
-        rs_shdL=	rs_shdLtm1;
-        rs_sunH=	rs_sunHtm1;
-        rs_sunL=	rs_sunLtm1;
-        SAI_H=      SAI_Htm1;
-        SAI_L=      SAI_Ltm1;
-        Sfr_H=      Sfr_Htm1;
-        Sfr_L=      Sfr_Ltm1;
-        SIF_H=      SIF_Htm1;
-        SIF_L=      SIF_Ltm1;
-        Slf_H=      Slf_Htm1;
-        Slf_L=      Slf_Ltm1;
-        Sll_H=      Sll_Htm1;
-        Sll_L=      Sll_Ltm1;
-        Sr_H=       Sr_Htm1;
-        Sr_L=       Sr_Ltm1;
-        SupK_H=     SupK_Htm1;
-        SupK_L=     SupK_Ltm1;
-        SupN_H=     SupN_Htm1;
-        SupN_L=     SupN_Ltm1;
-        SupP_H=     SupP_Htm1;
-        SupP_L=     SupP_Ltm1;
-        Swm_H=      Swm_Htm1;
-        Swm_L=      Swm_Ltm1;
-        T_H=        T_Htm1;
-        T_L=        T_Ltm1;
-        TBio_H=     TBio_Htm1;
-        TBio_L=     TBio_Ltm1;
-        Tden_H=     Tden_Htm1;
-        Tden_L=     Tden_Ltm1;
-        Tdp_H=      Tdp_Htm1;
-        Tdp_L=      Tdp_Ltm1;
-        TdpI_H=     TdpI_Htm1;
-        TdpI_L=     TdpI_Ltm1;
-        TexC_H=     TexC_Htm1;
-        TexC_L=     TexC_Ltm1;
-        TexK_H=     TexK_Htm1;
-        TexK_L=     TexK_Ltm1;
-        TexN_H=     TexN_Htm1;
-        TexN_L=     TexN_Ltm1;
-        TexP_H=     TexP_Htm1;
-        TexP_L=     TexP_Ltm1;
-        TNIT_H=     TNIT_Htm1;
-        TNIT_L=     TNIT_Ltm1;
-        TPHO_H=     TPHO_Htm1;
-        TPHO_L=     TPHO_Ltm1;
-        TPOT_H=     TPOT_Htm1;
-        TPOT_L=     TPOT_Ltm1;
-        Vl_H=       Vl_Htm1;
-        Vl_L=       Vl_Ltm1;
-        Vx_H=       Vx_Htm1;
-        Vx_L=       Vx_Ltm1;
+    Qi_in_Ro = Qi_out;  Ccrown_t = Ccrown_t_tm1;
+    v = [split("alp_soil b_soil Bam Bem BLit Cice Cicew CK1 Csno Csnow dQ_S DQ_S dQVEG DT_S dw_SNO e_sno " + ...
+        "EG EICE EIn_rock EIn_urb EK ELitter er ESN_In SSN_In ESN SSN EWAT FROCK f Gfin G H HV ICE_D ICE " + ...
+        "Imelt In_Litter In_rock In_SWE In_urb IP_wc Lk_rock Lk_wat Lk Lpho NavlI NDVI NIce NIn_SWE OF " + ...
+        "Oice OS O POT Pr_liq Pr_sno QE QEV Qfm Qi_out Qv r_litter r_soil ra Rd Rh Rn ros SE_rock SE_urb " + ...
+        "Smelt SND snow_albedo soil_albedo SP_wc surface_albedo SWE SWE_avalanched t_sls tau_sno Tdamp Tdeb " + ...
+        "Tdp Tdp_snow Tice Ts Ts_under TsVEG U_SWE Vice V WAT WIS WR_IP WR_SP Ws_under ZWT"); ...
+         split("AgeDL_H AgeDL_L AgeL_H AgeL_L AgePl_H AgePl_L An_H An_L ANPP_H ANPP_L B_H B_L BA_H BA_L " + ...
+         "Bfac_dayH Bfac_dayL Bfac_weekH Bfac_weekL dflo_H dflo_L Dr_H Dr_L e_rel_H e_rel_L e_relN_H e_relN_L " + ...
+         "EIn_H EIn_L fapar_H fapar_L FNC_H FNC_L gsr_H gsr_L hc_H hc_L In_H In_L ISOIL_H ISOIL_L Jsx_H Jsx_L " + ...
+         "Jxl_H Jxl_L Kleaf_H Kleaf_L Kreserve_H Kreserve_L Kuptake_H Kuptake_L Kx_H Kx_L LAI_H LAI_L " + ...
+         "LAIdead_H LAIdead_L ManIH ManIL NBLeaf_H NBLeaf_L NBLI_H NBLI_L NPP_H NPP_L NPPI_H NPPI_L " + ...
+         "Nreserve_H Nreserve_L NuLit_H NuLit_L NupI_H NupI_L Nuptake_H Nuptake_L OH OL PARI_H PARI_L " + ...
+         "PHE_S_H PHE_S_L Preserve_H Preserve_L Psi_l_H Psi_l_L Psi_s_H Psi_s_L Psi_x_H Psi_x_L Puptake_H " + ...
+         "Puptake_L RA_H RA_L rap_H rap_L RB_H rb_H RB_L rb_L Rdark_H Rdark_L Rexmy_H Rexmy_L Rg_H Rg_L " + ...
+         "rKc_H rKc_L Rmc_H Rmc_L Rmr_H Rmr_L Rms_H Rms_L rNc_H rNc_L rPc_H rPc_L Rrootl_H Rrootl_L " + ...
+         "rs_shdH rs_shdL rs_sunH rs_sunL SAI_H SAI_L Sfr_H Sfr_L SIF_H SIF_L Slf_H Slf_L Sll_H Sll_" + ...
+         "L Sr_H Sr_L SupK_H SupK_L SupN_H SupN_L SupP_H SupP_L Swm_H Swm_L T_H T_L TBio_H TBio_L " + ...
+         "Tden_H Tden_L Tdp_H Tdp_L TdpI_H TdpI_L TexC_H TexC_L TexK_H TexK_L TexN_H TexN_L TexP_H " + ...
+         "TexP_L TNIT_H TNIT_L TPHO_H TPHO_L TPOT_H TPOT_L Vl_H Vl_L Vx_H Vx_L")];
+        for x = v', eval(sprintf('%s = %stm1;', x, x)); end
+        for x = ["shdH","shdL","sunH","sunL"], eval(sprintf('Ci_%s = Citm1_%s;', x, x)); end
     end
   
 
