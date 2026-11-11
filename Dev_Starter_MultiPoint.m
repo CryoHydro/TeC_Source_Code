@@ -20,10 +20,10 @@ This code launches the Point Scale version of TC model.
 %% SITE SETUP
 %==========================================================================
 
-site_num_list = [1 2 3]; %Please number sequentially
-site_name_list = {'Shallap' 'Torre_Orsina' 'Hybas_Lvl7_Catchment_2070497830'};
+site_num_list = [1 2 3 4]; %Please number sequentially
+site_name_list = {'Shallap' 'Torre_Orsina' 'Hybas_Lvl7_Catchment_2070497830' 'Hybas_Lvl7_Catchment_2070497840'};
 num_sites = size(site_num_list,2);
-site_num = 1; %Choose site to run, this then selects the correct site directories
+site_num = 4; %Choose site to run, this then selects the correct site directories
 site_name = site_name_list{site_num};
 
 % Choose point or multipoint
@@ -31,7 +31,7 @@ site_name = site_name_list{site_num};
 IniCond.mode = "point";
 
 % if point mode, then select the point
-selected_ID = 152; %(only if running on laptop, SLURM can be used to state when using HPC) 
+selected_ID = 1; %(only if running on laptop, SLURM can be used to state when using HPC) 
 
 %===================================================
 %% Load config info
@@ -75,8 +75,8 @@ ta_lapse_file = CONFIG_vals.ta_lapse_file;  ta_lapse_name = CONFIG_vals.ta_lapse
 pr_lapse_file = CONFIG_vals.pr_lapse_file;  pr_lapse_name = CONFIG_vals.pr_lapse_name; %This is a structure Pr_lapse(m).month where each month has a linear model
 Meteo_el = CONFIG_vals.Meteo_el; %Elevation of station, used if OPT_forcing = 1
 elseif OPT_Forcing == 2
-Directories.forc_meteo = [Directories.forc '/Bias_corrected/' CONFIG_vals.forc_meteo_folder '/'];
-Directories.forc_meteoOD = [Directories.forc '/Output_Downscaling/' CONFIG_vals.forc_meteo_folder '/'];
+Directories.forc_meteo = [Directories.forc '/Clusters_BC/'];
+Directories.forc_meteoOD = [Directories.forc '/Clusters_DS/'];
 elseif OPT_Forcing == 3
 meteo_name = CONFIG_vals.forc_meteo_name; %e.g. 'Hybas_Lvl7_Catchment_2070497830_250m'
 end 
@@ -120,7 +120,7 @@ clear YE MO DA HO MI SE
 
 %% CHECK ALL ARE NEEDED!
 
-if ~exist(Directories.save, 'dir') 
+if ~exist(strcat('./',Directories.save), 'dir') %Note need to add ./ so looks in the subfolder, not on any path
     disp('Folders do not exist for outputs. Creating new folders')
     mkdir(Directories.save); 
     mkdir([Directories.save '1_Hourly/']); 
@@ -223,8 +223,8 @@ OPT_PARAM_vals = table2struct(OPT_PARAM_vals); %Ok can now get to values using a
 for k = 1:height(POI)
 id_location = char(string(POI.Name(k))); %id
 
-y_coord = POI.LAT_UTM(k); %Y
-x_coord = POI.LON_UTM(k); %X
+y_coord = POI.LON_UTM(k); %Y - check as Shallap might be wrong!
+x_coord = POI.LAT_UTM(k); %X
 
 pos_col = floor((x_coord - xllcorner) / cellsize) + 1;
 pos_row = floor((y_coord - yllcorner) / cellsize) + 1;
@@ -247,7 +247,7 @@ end
 %% Surface elevation for vegetation
 %--------------------------------------------------------------------------
 % Here, note that it is needed to define the starting point of the data in
-% the excel file. In this case it is from column 5 to the end. 
+% the excel file. In this case it is from column 7 to the end. 
 %--------------------------------------------------------------------------
 %NOTE zatm_surface needs adjusted
 zatm_surface = TT_par(strcmp(TT_par.Parameters,'zatm_surface'),7:size(TT_par,2));
@@ -404,54 +404,54 @@ Oa = 210000;% Intercellular Partial Pressure Oxygen [umolO2/mol] -
 %the zatm parameters
 
 if OPT_Forcing == 1
-Meteo_data = load(Directories.forc_meteo,meteo_name);
-Meteo_data = Meteo_data.(meteo_name);
-Forcing_Date = Meteo_data.DateTime;
-Ta = Meteo_data.Ta; %Air temperature, degrees C
-U = Meteo_data.RH; %Relative humidity, %
-Ws = Meteo_data.WS; %Wind speed, ms-1
-Pr = Meteo_data.Pr; %Precipitation, mm 
-SWin = Meteo_data.SWin; %Incoming shortwave, Wm-2  
-SWout = Meteo_data.SWout; %Outgoing shortwave, Wm-2
-Nin = Meteo_data.LWin; %Incoming longwave, Wm-2
-LWout = Meteo_data.LWout; %Outgoing longwave, Wm-2
-
-%Lapse rates
-Meteo_Params.hm_Ta_lapse = load(ta_lapse_file); %These are the Ta lapse rates from TOPKAPI, per hour and month for main station 144, catchment 406
-Meteo_Params.hm_Ta_lapse = Meteo_Params.hm_Ta_lapse.(ta_lapse_name); %Pull out of structure. The lapse rate column should be named 'Ta_lapse'
-Meteo_Params.Ldown_lapse = -0.031; %from Marty et al. (2002) p145
-%Pr lapse - based on ratio per month
-Meteo_Params.Pr_lapse = load(pr_lapse_file);
-Meteo_Params.Pr_lapse = Meteo_Params.Pr_lapse.(pr_lapse_name); %Take out of structure, this is the fit of ratio = (p1 * elevation) + p2. Just multiply ratio by Pr. 
-%Radiation lapse rates
-Meteo_Params.SAB1_lapse = 0.0049; %Wm-2 per m (from Simone, for the Alps, may be a little high for Andes), radiation increases with elevation
-Meteo_Params.SAB2_lapse = 0.0080; %Wm-2 per m (from Simone, for the Alps)
-Meteo_Params.PARB_lapse = 0.0047; %Wm-2 per m (from Simone, for the Alps)
-%Station elevations
-Meteo_Params.St_el = CONFIG_vals.Meteo_el;
-
-%Calculate radiation partition once to get t_bef and t_aft 
-a=17.27; b=237.3;
-Uf = U/100; %Change to fraction; (this is done again later for _P var)
-esat=611.*exp(a.*Ta./(b+Ta)); %Vapour pressure at saturation (Pa)
-ea=Uf.*esat;                 %Vapour pressure (Pa)
-Ds= esat - ea;              %Vapor Pressure Deficit (Pa)
-Ds(Ds<0)=0; 
-xr=a.*Ta./(b+Ta)+log10(Uf); 
-Tdew=b.*xr./(a-xr);               %Presumed dewpoint temperature (�C)
-clear a b xr;
-
-%Run radiation partition once to get t_bef and t_aft, and the radiation for
-%distribution
-GRAPH_VAR=0;
-Forcing_Date_num =datenum(Forcing_Date);
-[SD,SB,SAD1,SAD2,SAB1,SAB2,PARB,PARD,N,Rsws,t_bef,t_aft]=Automatic_Radiation_Partition_I(Forcing_Date_num,Lat,Lon,Meteo_el,IniCond.DeltaGMT,Pr,Tdew,SWin,GRAPH_VAR);
-clear N Rsws
+    Meteo_data = load(Directories.forc_meteo,meteo_name);
+    Meteo_data = Meteo_data.(meteo_name);
+    Forcing_Date = Meteo_data.DateTime;
+    Ta = Meteo_data.Ta; %Air temperature, degrees C
+    U = Meteo_data.RH; %Relative humidity, %
+    Ws = Meteo_data.WS; %Wind speed, ms-1
+    Pr = Meteo_data.Pr; %Precipitation, mm 
+    SWin = Meteo_data.SWin; %Incoming shortwave, Wm-2  
+    SWout = Meteo_data.SWout; %Outgoing shortwave, Wm-2
+    Nin = Meteo_data.LWin; %Incoming longwave, Wm-2
+    LWout = Meteo_data.LWout; %Outgoing longwave, Wm-2
+    
+    %Lapse rates
+    Meteo_Params.hm_Ta_lapse = load(ta_lapse_file); %These are the Ta lapse rates from TOPKAPI, per hour and month for main station 144, catchment 406
+    Meteo_Params.hm_Ta_lapse = Meteo_Params.hm_Ta_lapse.(ta_lapse_name); %Pull out of structure. The lapse rate column should be named 'Ta_lapse'
+    Meteo_Params.Ldown_lapse = -0.031; %from Marty et al. (2002) p145
+    %Pr lapse - based on ratio per month
+    Meteo_Params.Pr_lapse = load(pr_lapse_file);
+    Meteo_Params.Pr_lapse = Meteo_Params.Pr_lapse.(pr_lapse_name); %Take out of structure, this is the fit of ratio = (p1 * elevation) + p2. Just multiply ratio by Pr. 
+    %Radiation lapse rates
+    Meteo_Params.SAB1_lapse = 0.0049; %Wm-2 per m (from Simone, for the Alps, may be a little high for Andes), radiation increases with elevation
+    Meteo_Params.SAB2_lapse = 0.0080; %Wm-2 per m (from Simone, for the Alps)
+    Meteo_Params.PARB_lapse = 0.0047; %Wm-2 per m (from Simone, for the Alps)
+    %Station elevations
+    Meteo_Params.St_el = CONFIG_vals.Meteo_el;
+    
+    %Calculate radiation partition once to get t_bef and t_aft 
+    a=17.27; b=237.3;
+    Uf = U/100; %Change to fraction; (this is done again later for _P var)
+    esat=611.*exp(a.*Ta./(b+Ta)); %Vapour pressure at saturation (Pa)
+    ea=Uf.*esat;                 %Vapour pressure (Pa)
+    Ds= esat - ea;              %Vapor Pressure Deficit (Pa)
+    Ds(Ds<0)=0; 
+    xr=a.*Ta./(b+Ta)+log10(Uf); 
+    Tdew=b.*xr./(a-xr);               %Presumed dewpoint temperature (�C)
+    clear a b xr;
+    
+    %Run radiation partition once to get t_bef and t_aft, and the radiation for
+    %distribution
+    GRAPH_VAR=0;
+    Forcing_Date_num =datenum(Forcing_Date);
+    [SD,SB,SAD1,SAD2,SAB1,SAB2,PARB,PARD,N,Rsws,t_bef,t_aft]=Automatic_Radiation_Partition_I(Forcing_Date_num,Lat,Lon,Meteo_el,IniCond.DeltaGMT,Pr,Tdew,SWin,GRAPH_VAR);
+    clear N Rsws
 
 % =======  Set for fully distributed
 elseif OPT_Forcing == 2
-t_bef = CONFIG_vals.t_bef;
-t_aft = CONFIG_vals.t_aft;
+    t_bef = CONFIG_vals.t_bef;
+    t_aft = CONFIG_vals.t_aft;
 
 %========== For On The Fly distributed forcing ======
 elseif OPT_Forcing == 3
@@ -533,9 +533,9 @@ Sun_Vars.Aspect = Aspect; %Single grid
 % Crop to time
 %.........................................................................
 
-id_date_for_run = ismember(Forcing_Date,Date); %So this is the index of the forcing data for this month
 %  ===== For weather station point =========
 if OPT_Forcing == 1
+id_date_for_run = ismember(Forcing_Date,Date); %So this is the index of the forcing data for this month
 % So for weather station point Meteo_P is the meteorology at the station
 Meteo_P=array2table(Date);
 Meteo_P.Properties.VariableNames = {'Date'};
@@ -564,9 +564,11 @@ Meteo_P.PARB = PARB(id_date_for_run)';
 Meteo_P.PARD = PARD(id_date_for_run)';
 %Air pressure will be calculated based on elevation
 %Vapour pressure will be calculated per point
+disp('Meteo loaded')
+elseif OPT_Forcing == 2 || OPT_Forcing ==3
+Meteo_P = []; %This is just to not break the function
 end
 
-disp('Meteo loaded')
 
 %% SINGLE POINT LAUNCHER FOR PERSONAL COMPUTER
 %==========================================================================
@@ -588,15 +590,11 @@ disp('Computation time - Single Point')
 disp([num2str(round(Computational_Time/60,1)) ' mins'])
 
 %% Memory use - Windows only
-if ~contains(Directories.root,"nfs") 
+currentFolder = pwd;
+if ~contains(currentFolder,"nfs") 
 [user, sys] = memory; % Windows only
 disp(['Mem used in the Starter: ', num2str(user.MemUsedMATLAB/1e6), ' MB'])
 end
-
-% Memory out
-%--------------------------------------------------------------------------
-%profile off
-%profile viewer
 
 
 %% MULTIPLE POINT LAUNCHER 
@@ -610,7 +608,8 @@ elseif IniCond.mode == "multipoint"
 %--------------------------------------------------------------------------
 
 %if I am working on my personal computer define this
-if ~contains(Directories.root,"nfs") 
+currentFolder = pwd;
+if ~contains(currentFolder,"nfs") 
 
     numWorkers = 2; % Example: Set to 4 workers
     
@@ -634,20 +633,7 @@ tic;
 % Specific tasks - Here define the runs - TO CHECK
 %--------------------------------------------------------------------------
 
-Torun = names; %{"Cluster_26","Cluster_11"}; %Set names to run
-
-% %Not sure this works
-% idxn=zeros(size(names,1),size(Torun,2));
-% for r=1:size(Torun,2)
-% idxn(:,r) = ismember(names,Torun{r});
-% end
-% idxn2 = sum(idxn,2); %Index to run
-
-% %specific_indices = 1:length(names); % for all the runs
-% specific_indices = 1:20;
-% 
-% % Create a new cell array of names based on the specific indices
-% selected_names = names(specific_indices);
+Torun = names; %["Cluster_001","Cluster_002"]; %Set names to run 
 
 % Parallel computing launch for the Model
 %--------------------------------------------------------------------------
@@ -666,7 +652,7 @@ disp('Computation time - MultiPoint ')
 disp([num2str(round(Computational_Time/60,1)) ' mins'])
 
 %% Memory use - Windows only
-if ~contains(Directories.root,"nfs") 
+if ~contains(currentFolder,"nfs") 
 [user, sys] = memory; % Windows only
 disp(['Mem used by the Starter: ', num2str(user.MemUsedMATLAB/1e6), ' MB'])
 end

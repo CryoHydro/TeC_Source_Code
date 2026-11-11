@@ -16,20 +16,12 @@ Code explanation:
 %}
 %==========================================================================
 
-%% Debugger
-%Point = "VelinoCluster95";
-
-
 %% As a Function 
 function result=Dev_run_Point_Pro(Directories, IniCond, Point, POI, ksv, dateRun, TT_par, zatm_surface, dtm_file,t_bef,t_aft,Meteo_P,Meteo_Params,Datam,Sun_Vars,dt,dth,OPT_PARAM_vals,mm,Ca,Oa,CONFIG_vals,VPAR,OPT_Num)
 
-%% Inputs
 
 % DeltaGMT must be defined for MAIN_FRAME_Pro
 DeltaGMT = IniCond.DeltaGMT;
-
-%% MODEL PARAMETERS
-%==========================================================================
 
 %% Data storing  
 %==========================================================================
@@ -50,9 +42,6 @@ DTM(isnan(DTM)) = 0; %%??
 [m_cell,n_cell]=size(DTM);
 num_cell=numel(DTM);
 
-%Swapping somegrids
-
-
 % ----------- Pull out info for location -------------------
 
 Names = string(POI.Name);
@@ -66,7 +55,11 @@ Cwat = POI.Cwat(loc);
 Curb = POI.Curb(loc); 
 Crock = POI.Crock(loc);
 Cbare = POI.Cbare(loc);
+if iscell(POI.Ccrown)==1
+Ccrown = POI.Ccrown{loc};
+else
 Ccrown = POI.Ccrown(loc);
+end
 zatm = POI.zatm(loc);
 id_location = string(POI.Name(loc));
 cc_max = POI.cc_max(loc);
@@ -123,7 +116,12 @@ end
 Afirn = reshape(Afirn,num_cell,1);
 
 %SNOWD is taken directly and used in intial conditions as initial snow depth
-SNOWD=reshape(SNOWD,num_cell,1);
+if ~exist('SNOWD','var')
+    SNOWD = DTM.*0; %So snow depth 0 everywhere at time 1
+    SNOWD=reshape(SNOWD,num_cell,1);
+else
+    SNOWD=reshape(SNOWD,num_cell,1);
+end
 
 % Initial snow albedo
 if ~exist('SNOWALB','var')
@@ -156,12 +154,12 @@ SNOWD=reshape(SNOWD,num_cell,1);
 SOIL_TH=reshape(SOIL_TH,num_cell,1);
 PSAN=reshape(PSAN/100,num_cell,1); Psan = PSAN(ij); % Soil sand content at pixel ij
 PCLA=reshape(PCLA/100,num_cell,1);  Pcla = PCLA(ij); % Soil clay content at pixel ij
-if max(max(PORG>40)) %Presume PORG in g/kg not %
+if max(max(PORG))>40 %Presume PORG in g/kg not %
     PORGr=reshape(PORG/1000,num_cell,1);
 else %PORG brought in as % 
     PORGr=reshape(PORG/100,num_cell,1);
 end
-Porg = PORG(ij); % Soil organic content at pixel ij
+Porg = PORGr(ij); % Soil organic content at pixel ij
 
 %  ---  Set Soil thickness and related params ---
 OPT_soil_th = OPT_PARAM_vals.OPT_soil_th;
@@ -191,114 +189,30 @@ end
 % Saving initial conditions of the model
 out = strcat(Directories.save, '4_INIT_COND/INIT_COND_', IniCond.SITE ,'_MultiPoint_',Point,'.mat'); % file path initial conditions
 
-%% CHECK THIS
-topo = 1;
-
-
-
-%% FORCING
-%==========================================================================
-% Distribute for full period based on lapse rates and cell info
-%==========================================================================
-
-% % Years needed - maybe don't need
-% years_forc = year(dateRun.start):year(dateRun.end);
-% forc_opened = struct(); 
-
-%% Extraction of forcing data
-% DEBUGGER
-%--------------------------------------------------------------------------
-%Already downloaded and cropped
-% forc_file= [Directories.forc 'Forcing_ERA5Land_' char(Point) '.mat']; % Put here the path of where you downloaded the repository
-% load(forc_file); % Load forcing table for the current POI
-
-%forc(forc.t2m<forc.d2m,:)
-
-% % Decompressing - Only for big data sets
-% %--------------------------------------------------------------------------
-% forc = Data_compressor(forc,'decompress');
-
-%DEBUGGING
-%find(forc.t2m<forc.d2m)
-
-
-%% Combination of data into a single table
-Date = dateRun.list;
-
-% %define period and time zone info
-% x1=find(dateRun.start == dateRun.list,1);
-% x2=find(dateRun.end == dateRun.list,1);
-
-
 %% Displaying modelling parameters
 disp(strcat("Site selected: ", IniCond.SITE));
 disp(['Running T&C for pixel: ' char(id_location)]);
 disp(['Simulation period: ' datestr(dateRun.start) ' to ' datestr(dateRun.end)]);
 
-%% Fetch time and do date handling
-%Date = dateRun.list;
-% [YE,MO,DA,HO,MI,SE] = datevec(Date); %Datam and input
-% Datam(:,1) = YE; Datam(:,2)= MO; Datam(:,3)= DA; Datam(:,4)= HO;
-% clear YE MO DA HO MI SE
-
+%========================================================================
 %% Meteorological input
 %==========================================================================
-%{
-FORCINGS: 
-    Precipitation [mm]
-    Air Pressure [Pa]
-    Temperature [C]
-    Wind Speed [m s-1]    
-    Radiation [W m-2]    
-    Dew Point temperature [C]
 
-CALCULATIONS:
-    Relative Humidity [-]
-%}
-%==========================================================================
-
-% % Period of forcing data
-% forcing = forc(x1:x2,:); %Don't need this
-
-% Check function for variables - check_var()
-%--------------------------------------------------------------------------
-%{
-Define variables names in the string in order based on your input file.
-Do no change the order of variables in check_var. Just change the names
-based on your file of forcing. So, if your column for temperature is called
-Temp instead of t2m, then change t2m to Temp below.
-%}
-
-%Define variables names in order based on your input file
-
-% check_var(Meteo_P, ...
-%     ["Ta" ... % Temperature
-%     "Tdew" ...  % Dew Point temperature
-%     "Pr" ...   % Precipitation
-%     "SWin" ... % Downward short wave radiation
-%     "N" ... % Downdward Long wave radiation
-%     "Ws" ... % Wind speed
-%     "sp" ...   % Air pressure
-%     "es" ...   % saturation vapor pressure
-%     "ea" ...   % actual vapor pressure
-%     "RH" ...   % Relative humidity
-%     "SAD1" ... % SAD1
-%     "SAD2" ... % SAD2
-%     "SAB1" ... % SAB1
-%     "SAB2" ... % SAB2
-%     "PARB" ... % PARB
-%     "PARD" ... % PARD
-%     "N" ...    % Cloudiness
-%     ],Point)
+% Here for OPT_Forcing = 1 distribute the meteo data to the correct
+% elevation
+%For OPT_Forcing = 2 bring in the forcing data for the correct point, it
+%should already be downscaled to the correct elevation
 
 NN = size(dateRun.list,1);%%% time Step
+Date = dateRun.list;
 
 % Height of virtual station
 zatm_hourly = repmat(2.00,NN,1);
 zatm_hourly_on = 0;
 
-
-%Distribution of Meteo variables
+%----------------------------------------------------------------------
+%Calculate or load forcing for the specific point
+% --------------------------------------------------------------------
 
 %Sort lapse rates
 if CONFIG_vals.OPT_Forcing == 1
@@ -370,107 +284,78 @@ if CONFIG_vals.OPT_Forcing == 1
     U = U./100; %Turn into fraction
     U(U>1) = 1; %Cannot be more than 100%
 
-elseif OPT_Forcing == 2
+    % Vapor pressure - calculate based on distributed Ta and U
+    a=17.27; b=237.3;
+    esat=611.*exp(a.*Ta./(b+Ta)); %Vapour pressure at saturation (Pa)
+    ea=U.*esat;                 %Vapour pressure (Pa)
+    Ds= esat - ea;              %Vapor Pressure Deficit (Pa)
+    Ds(Ds<0)=0; 
+    %Don't recalculate Tdew - its above
+    clear a b xr;
+
+elseif CONFIG_vals.OPT_Forcing == 2
     
     %TO CHECK
     %Load table of data for given point
-    forc_file= [Directories.forc 'Forcing_ERA5Land_' char(Point) '.mat']; % Put here the path of where you downloaded the repository
-    load(forc_file); % Load forcing table for the current POI
+    %This is for Tom type data
+    forc_file = [Directories.forc_meteo char(Point) '.csv']; % Put here the path of where you downloaded the repository
+    Meteo_P = readtable(forc_file); % Load forcing table for the current POI
+
+    %Crop to run time
+    Forcing_Date =  Meteo_P.dateTime;
+    id_date_for_run = ismember(Forcing_Date,dateRun.list);
+    Meteo_P = Meteo_P(id_date_for_run,:);
     
-    % Decompressing - Only for big data sets
+    % Decompressing - Only for big data sets - for Max type
     %--------------------------------------------------------------------------
-    forc = Data_compressor(forc,'decompress');
-
-    %** Also crop to time
-    %Turn table to double in one go
-
-    % Precipitation from ERA5Land
-    Pr=double(forcing.tp);
-    Pr(isnan(Pr))=0;
+    % forc = Data_compressor(forc,'decompress');
+    % %Also Max data need to be changed to double
+    
+    %Set and correct variables -  note all should already be downscaled and
+    %bias corrected for the point location
+    Ta = Meteo_P.Ta; %Air temperature, degrees C
+    Pr = Meteo_P.Pr; %Precipitation, mm
     Pr(Pr<0.01)=0;
-    
-    %Precipitation from stations
-    
-    % Air pressure
-    %--------------------------------------------------------------------------
-    % Air Pressure in mbar based on the PDF for variables and parameters of TC
-    % Pressure comes in Pa from ERA5
-    Pre=double(forcing.sp/100);    
-    
-    % Temperature
-    %--------------------------------------------------------------------------
-    % 2m air temperature
-    Ta=double(forcing.t2m);
-    
-    % Wind Speed
-    %--------------------------------------------------------------------------
-    Ws=double(forcing.ws10);
+    N = Meteo_P.Latm; %Longwave radiation, W m-2 (Watch Meteo_P.N is not incoming longwave)
+    U = Meteo_P.U; %Relative humidity, already as a fraction
+    Ws = Meteo_P.Ws; %Wind speed, ms-1
     Ws(Ws < 0.01) = 0.01;
+    Pre = Meteo_P.Pre; %Air pressure, mbar
+    SWin = Meteo_P.Rsw; %Incoming shortwave radiation, Wm-2
     
-    % Relative humidity
-    %--------------------------------------------------------------------------
-    % Divided by 100 to set the number in the range 0-1
-    U=double(forcing.RH/100);
+    %Calculate Tdew
+    a=17.27; b=237.3;
+    esat=611.*exp(a.*Ta./(b+Ta)); %Vapour pressure at saturation (Pa)
+    ea=U.*esat;                 %Vapour pressure (Pa) U here should be a fraction
+    Ds= esat - ea;              %Vapor Pressure Deficit (Pa)
+    Ds(Ds<0)=0; 
+    xr=a.*Ta./(b+Ta)+log10(U); %U here should be a fraction
+    Tdew=b.*xr./(a-xr);               %Presumed dewpoint temperature (�C)
+    clear a b xr;
     
-    % Longwave radiation
-    %--------------------------------------------------------------------------
-    % N can be cloud cover [-] or longwave incoming radiation [W m-2]
-    % Latm=forcing.LW_rad_downward_HH; % Latm:Incoming long wave radiation [W m-2]
-    % N=ones(NN,1); % cloud cover [-]
-    % N = forcing.LW_rad_downward_HH;
-    N = double(forcing.N);
-    
-    % Radiation partition
-    %--------------------------------------------------------------------------
-    SAD1=double(forcing.SAD1); SAD2=double(forcing.SAD2); 
-    SAB1=double(forcing.SAB1); SAB2=double(forcing.SAB2);
-    PARB=double(forcing.PARB); PARD=double(forcing.PARD);
-    
-    % Vapor pressure - Dew Point temperature
-    %--------------------------------------------------------------------------
-    %esat/ea/Ds/Tdew
-    esat = double(forcing.es);   % Vapour pressure at saturation (Pa)
-    ea = double(forcing.ea);     % Vapour pressure (Pa)
-    Tdew = double(forcing.d2m);
+    %Run radiation partition to get the radiation for
+    %distribution
+    %Don't output N (as this would over-right the LW) not t_bef or t_aft
+    GRAPH_VAR=0;
+    Meteo_el = DTM(ROW,COL);
+    dateRun.listnum =datenum(dateRun.list);
+    [SD,SB,SAD1,SAD2,SAB1,SAB2,PARB,PARD,~,Rsws,~,~]=Automatic_Radiation_Partition_I(dateRun.listnum,Lat,Lon,Meteo_el,IniCond.DeltaGMT,Pr,Tdew,SWin,GRAPH_VAR);
+    clear Rsws SD SB 
+
+    SAD1 = SAD1'; SAD2 = SAD2';
+    SAB1 = SAB1'; SAB2 = SAB2';
+    PARB = PARB'; PARD = PARD';
 
 end
 
-
-% Vapor pressure - calculate based on distributed Ta and U
-a=17.27; b=237.3;
-esat=611.*exp(a.*Ta./(b+Ta)); %Vapour pressure at saturation (Pa)
-ea=U.*esat;                 %Vapour pressure (Pa)
-Ds= esat - ea;              %Vapor Pressure Deficit (Pa)
-Ds(Ds<0)=0; 
-%Don't recalculate Tdew - its above
-clear a b xr;
-
 %% Then check_var
+check_var_3D(Ta,Tdew,Pr,N,Ws,Pre,esat,ea,U,SAD1,SAD2,SAB1,SAB2,PARB,PARD);
 
-% Albedo parameters
-%--------------------------------------------------------------------------
-%Ameas = ones(NN,1);
-%alpha = 0; % switch for albedo
-%Ameas_t=0; % albedo
-%Aice_meas_on_hourly = ones(height(forcing),1)/2; % albedo
-%Asno_meas_on_hourly = ones(height(forcing),1)/2; % albedo
-
-% Clear forcing and forc - Already used - Important for several clusters
-%--------------------------------------------------------------------------
-clear forc forcing
-
-
-%% DING PARAMETERIZATION
-% Initial daily mean values for Ding parametrization
-%Are they used??
-
-% Ta_Ding_d = nanmean(Ta(1:24));
-% Pre_Ding_d = nanmean(Pre(1:24));
-% ea_Ding_d = nanmean(ea(1:24));
-
+%====================================================================
 %% RADIATION AND TOPOGRAPHY
+%========================================================
+topo = OPT_PARAM_vals.topo; %Option for deciding if radiation is altered for topography or not
 
-%MASK = MASK.*0+1;
 MASKn=reshape(MASK,num_cell,1);
 
 if topo == 1
@@ -550,9 +435,6 @@ INIT_COND_v4(num_cell,m_cell,n_cell,...
 load(out);
 end
 
-%% Debugger
-%disp(Nreserve)
-
 %% RUN MODEL
 %==========================================================================
 % PARAM_IC: Define parameter file
@@ -560,7 +442,7 @@ end
 %==========================================================================
 %PARAM_IC = strcat(Directories.model,'/TC_setups/Shallap/Shallap_MOD_PARAM_Multipoint.m');
 
-[aR,             Zs,             EvL_Zs,       Inf_Zs,     Bio_Zs,      Zinf, ...
+[aR,             EvL_Zs,       Inf_Zs,     Bio_Zs,      Zinf, ...
  RfH_Zs,         RfL_Zs,         dz,           Ks_Zs,      Dz,          ms, ...
  Kbot,           Krock,          zatm,         Color_Class,  OM_H,       OM_L,        PFT_opt_H, ...
  PFT_opt_L,      d_leaf_H,       d_leaf_L,     SPAR,       Phy,         Soil_Param, ...
@@ -569,7 +451,7 @@ end
  fbe_H,          fab_L,          fbe_L,        ZR95_H,     ZR95_L,      ZRmax_H,       ZRmax_L,...
  In_max_urb,     In_max_rock,    K_usle,         Urb_Par,      Deb_Par,    Zs_deb,      Sllit,...
  Kct,            ExEM,           ParEx_H,      Mpar_H,     ParEx_L,     Mpar_L] = ....
-                        PARAMETERS_SOIL_DEV_SHORT_RP( ...
+                        PARAMETERS_SOIL_DEV( ...
  ksv(ij),        Psan,       Pcla,     Porg,   DEB,  md_max,...
  Afirn(ij),      SOIL_TH(ij),    VPAR,        TT_par,       OPT_PARAM_vals, Zs, ms_max);
 
@@ -586,14 +468,8 @@ pow_dis = NaN;
 %Ok so previously, some initial conditions were overrun in
 %MOD_PARAM_Multipoint, esp. snow_albedo (=0.6)
 
-%% DEBUGGER
-%Deleting initial conditions 
-%% DEBUGGER
-%------------------------------------------------------------------
-%[user, sys] = memory; % Windows only
-%disp(['Mem used by the Starter: ', num2str(user.MemUsedMATLAB/1e6), ' MB'])
-%clear An_H_t An_L_t O_t Tdp_t V_t Psi_I_H_t Psi_l_L_t Psi_l_H_t ...
-%    Psi_x_H_t Psi_x_L_t Rdark_H_t Rdark_L_t Tdp_H_t Tdp_L_t
+% ----------------------------------------------------------------
+%% RUN MAIN FRAME
 %------------------------------------------------------------------
 
 MAIN_FRAME_Pro; % Launch the main frame of T&C. Most of the things happen in this line of code %Was MAIN_FRAM_Pro ? What's the difference?
@@ -618,7 +494,7 @@ disp(['Memory used by variables at the end of MAIN_FRAME: ', num2str(totalSize/1
 % Negative evapotranspiration (ET) is dew
 %==========================================================================
 % post-compute sublimation from ESN
-SSN = ESN.*(Ts<0);
+SSN = ESN.*(Ts<0); 
 ET(ET < 0) = 0; 
 
 %% REMOVAL OF PARAMETERS TO FREE SPACE -SIZE OF ELEMENT ARE IMPORTANT
@@ -630,14 +506,14 @@ all_vars = who;
 %     'SAD1','SAD2','SAB1','SAB2','Pre','Pr','Pr_sno', 'ALB','Smelt','Imelt','SSN', ...
 %     'ICE','ET', 'ETen' ,'QE', 'ros', 'NDVI', 'T_H', 'T_L', 'O', 'FROCK', ...
 %     'Directories', 'IniCond', 'Point', 'POI', 'ksv', 'dateRun', ...
-%     'Lat','Lon','Zbas','dbThick', 'SnowIce_Param', 'Deb_Par','id_location','output_daily', ...
+%     'Lat','Lon','Zbas','DEB', 'SnowIce_Param', 'Deb_Par','id_location','output_daily', ...
 %     'LAI_H', 'LAI_L', 'NPP_H', 'NPP_L', 'Ccrown'};
 
 vars_to_keep = {'Date', 'EICE','ESN','SND','SWE', 'Ta','Ws','U','N', 'Ts', 'ea','Rn',...
     'SAD1','SAD2','SAB1','SAB2','Pre','Pr','Pr_sno','Pr_liq', 'ALB','Smelt','Imelt','SSN', ...
     'ICE','ICE_D','ET', 'ETen' ,'QE', 'ros', 'NDVI', 'T_H', 'T_L', 'O', 'FROCK', ...
     'Directories', 'IniCond', 'Point', 'POI', 'ksv', 'dateRun', ...
-    'Lat','Lon','Zbas','dbThick', 'SnowIce_Param', 'Deb_Par','id_location','output_daily', ...
+    'Lat','Lon','Zbas','DEB', 'SnowIce_Param', 'Deb_Par','id_location','output_daily', ...
     'LAI_H', 'LAI_L', 'NPP_H', 'NPP_L','Ccrown','Csno','B_L','B_H','LAI_L','LAI_H','NPP_L','NPP_H','An_L','An_H',...
     'Bfac_dayL','Bfac_dayH','EG','EIn_L','EIn_H','EIn_rock','H','HV','G','In_L','In_H','In_SWE','In_rock'...
     'OF','OH','OL','OS','PHE_S_L','PHE_S_H','Qfm','Qv','RA_L','RA_H','Rg_L','Rg_H','Rh','SAI_L','SAI_H','T_L','T_H'...
@@ -668,13 +544,13 @@ As outputs:
 Date_R = char(Date); 
 
 %% Parameter output
-Param_t = table(Lat,Lon,Zbas,dbThick,'VariableNames',{'Lat','Lon','Zbas','dbThick'});
+Param_t = table(Lat,Lon,Zbas,DEB,'VariableNames',{'Lat','Lon','Zbas','DEB'});
 Param_t = [Param_t, struct2table(SnowIce_Param), struct2table(Deb_Par)];
 Param_t = rows2vars(Param_t);
 Param_t = renamevars(Param_t,{'OriginalVariableNames','Var1'},{'Parameter','Value'});
 
 % Exporting as .txt
-writetable(Param_t, strcat(Directories.save, '3_Params/',id_location,'_param.txt') )
+writetable(Param_t, strcat(Directories.save, '3_Parameters/',id_location,'_param.txt') )
 
 % Here I manually choose the T&C outputs I want to save at each point.
 Outputs_t = table(Date, ...
