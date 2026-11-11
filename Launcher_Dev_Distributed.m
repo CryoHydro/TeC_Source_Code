@@ -52,7 +52,8 @@ OPT_Forcing = CONFIG_vals.OPT_Forcing; %Choose type of forcing, 1= from AWS whic
 OPT_Veg_Param = CONFIG_vals.OPT_Veg_Param; %Choose if vegetation parameters (for Ccrown, Cwat, Crock, Curb, Cbare) are one value per landcover type (1), or gridded and variable per landcover (2). 
 %For 1 change the values in VPAR_T directly, for 2 provide the grids in the
 %dtm_file. Note for 2 you still need the table to read the Veg_type names
-%but the values are not used. 
+%but the values are not used.
+OPT_Decouple = CONFIG_vals.OPT_Decouple; %Glacier cooling effect on air temperature (Shaw et al., 2025): 1 = on, 0 = off
 
 %% DIRECTORIES - ALL RELATIVE - NO NEED TO UPDATE 
 %==========================================================================
@@ -98,11 +99,6 @@ addpath(genpath([site_name '/Preprocessing/OUTPUTS'])); % Where are distributed 
 %addpath(genpath([Directories.model,'/T_and_C/TC_setups/' site_name '/RUNS/INPUTS'])); % Where is located the meteorological forcing and Shading matrix 
 addpath(genpath([site_name '/Forcing'])); % Add path to Ca_Data
 addpath(genpath('T&C_Code')); %T&C source code 
-% **** TEMPORARY **
-Func_Dir = 'B:\group\pelligrp\Project_folders\MountainWater\Tethys_Chloris\Workflow_dev\Scripts\Tom\Functions'; % Root folder select
-addpath(genpath(Func_Dir))
-addpath(genpath('B:\group\pelligrp\Project_folders\MountainWater\Tethys_Chloris\Workflow_dev\downscaling')); % path of current downscaling folder (Mike - GitHub)
-%***
 
 % Modelling period and time
 %--------------------------------------------------------------------------
@@ -904,7 +900,7 @@ for t=t_start:N_time_step
     end
 
     %=============================================
-    %% Disribute meteorological variables
+    %% Distributed meteorological variables
     % ===========================================
     %Then create grids for every cell so time in rows, space in columns
     %Preallocate where necessary
@@ -1148,8 +1144,7 @@ for t=t_start:N_time_step
     end
 
     %========= Further forcing steps for all types ==========
-OPT_Decouple = 1; % NEED TO ADD AS AN OPTION TO THE PARAM FILES
-    if OPT_Decouple == 1 
+    if OPT_Decouple == 1
 
     % Glacier Cooling Effect - Shaw et al. (2025)
     load('ModelCoefficients_Decoupling.mat'); % Should be in 'Functions' path that is already generated
@@ -1159,6 +1154,8 @@ OPT_Decouple = 1; % NEED TO ADD AS AN OPTION TO THE PARAM FILES
     D = DTM(:)'; F = FPL(:)'; % NEED TO CHANGE ORIENTATION OF GRIDS?
 
     for tt = 1:size(Ta_S,1)
+        
+        Swin = SAD1_S + SAB1_S + SAD2_S + SAB2_S;
         if min(Swin(tt,:),[],'all') > 30 % day time only (without very overcast conditions)
         
         T = Ta_S(tt,:); S = SpecHum(tt,:); FF = Ws_S(tt,:); Td = Tdew_S(tt,:);
@@ -1166,8 +1163,8 @@ OPT_Decouple = 1; % NEED TO ADD AS AN OPTION TO THE PARAM FILES
 
         ValidCooling = ~isnan(F) & ~isnan(D) & T > 0;
 
-        Td(ValidCooling) = T(ValidCooling) .* K(ValidCooling);      
-            T(ValidCooling) = T(ValidCooling) .* K(ValidCooling);
+        Td(ValidCooling) = Td(ValidCooling) .* K(ValidCooling);      
+        T(ValidCooling) = T(ValidCooling) .* K(ValidCooling);
                   
         Ta_S(tt,:) = T;
         Tdew_S(tt,:) = Td;
