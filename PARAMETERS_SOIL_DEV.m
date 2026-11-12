@@ -24,16 +24,41 @@ function[aR,              EvL_Zs,      Inf_Zs,     Bio_Zs, ...
          ParEx_H,         Mpar_H,     ParEx_L,     Mpar_L] ...
                      =PARAMETERS_SOIL_DEV( ...
          cell_class,      Psan,       Pcla,        Porg,       dbThick, ...
-         md_max,          Afirn,      Soil_th,     VPAR,        TT_par, ...
+         md_max,          Afirn,      Soil_th,     VPAR,        TT_vals, ...
          OPT_PARAM_vals,  Zs,         ms)
 
 %% SOIL PARAMETERS
 %==========================================================================
 
-% Unpack params from OPT_PARAM_vals
-To_release = {'fieldNames','Zdes','Zinf','Zbio','SPAR','Kfc','Phy','In_max_urb','In_max_rock','ros_max1','ros_max2','Th_Pr_sno','Ice_wc_sp','ros_Ice_thr','WatFreez_Th','dz_ice',...
-    'CASE_ROOT','Kct','gcI','KcI','Sp_SN_In','Sllit','fpr','aR','Color_Class','Urb_Par_alb','Urb_Par_e_sur','Urb_Par_BuildH'};
-v2struct(OPT_PARAM_vals,To_release);
+% Unpack params from OPT_PARAM_vals (explicit, replaces v2struct which is slow:
+% a parameter added to Options_and_NoVegParams.xlsx and needed here must also be added below)
+Zdes           = OPT_PARAM_vals.Zdes;
+Zinf           = OPT_PARAM_vals.Zinf;
+Zbio           = OPT_PARAM_vals.Zbio;
+SPAR           = OPT_PARAM_vals.SPAR;
+Kfc            = OPT_PARAM_vals.Kfc;
+Phy            = OPT_PARAM_vals.Phy;
+In_max_urb     = OPT_PARAM_vals.In_max_urb;
+In_max_rock    = OPT_PARAM_vals.In_max_rock;
+ros_max1       = OPT_PARAM_vals.ros_max1;
+ros_max2       = OPT_PARAM_vals.ros_max2;
+Th_Pr_sno      = OPT_PARAM_vals.Th_Pr_sno;
+Ice_wc_sp      = OPT_PARAM_vals.Ice_wc_sp;
+ros_Ice_thr    = OPT_PARAM_vals.ros_Ice_thr;
+WatFreez_Th    = OPT_PARAM_vals.WatFreez_Th;
+dz_ice         = OPT_PARAM_vals.dz_ice;
+CASE_ROOT      = OPT_PARAM_vals.CASE_ROOT;
+Kct            = OPT_PARAM_vals.Kct;
+gcI            = OPT_PARAM_vals.gcI;
+KcI            = OPT_PARAM_vals.KcI;
+Sp_SN_In       = OPT_PARAM_vals.Sp_SN_In;
+Sllit          = OPT_PARAM_vals.Sllit;
+fpr            = OPT_PARAM_vals.fpr;
+aR             = OPT_PARAM_vals.aR;
+Color_Class    = OPT_PARAM_vals.Color_Class;
+Urb_Par_alb    = OPT_PARAM_vals.Urb_Par_alb;
+Urb_Par_e_sur  = OPT_PARAM_vals.Urb_Par_e_sur;
+Urb_Par_BuildH = OPT_PARAM_vals.Urb_Par_BuildH;
 
 %Where:
 %Zdes % Depth of evaporation layer [mm]
@@ -98,19 +123,138 @@ end
 cc      = length(VPAR.Ccrowns{cell_class}); %Note this was POI.Crown and is used in case there are multiple Crowns per landcover
 II      = VPAR.Veg_type{cell_class}; %Name of cell type
 
-% ===== Pull out all params from TT_par =========
-[tf,loc] = ismember(TT_par.Properties.VariableNames,II);
-[~,p] = sort(loc(tf)); %Need to be careful to maintain order of veg names
-idx = find(tf);
-II_id = idx(p);
-II_name =find(TT_par.Properties.VariableNames == "Parameters");
-TT_par_II = TT_par(:,II_id); %Extract on for vegetation type
-TT_par_II = rows2vars(TT_par_II);
-TT_par_II  =TT_par_II (:,2:end); %Just remove Veg name column
-TT_par_II.Properties.VariableNames = TT_par{:,II_name};
-TT_par_vals = table2struct(TT_par_II,ToScalar=true);
-%Release all params
-v2struct(TT_par_vals);
+% ===== Vegetation params of this class =========
+% TT_vals{k} is built once in the launcher from TT_par, for row k of VPAR.Class
+TP = TT_vals{cell_class};
+if isempty(TP)
+    error('PARAMETERS_SOIL_DEV:noVegParams', 'No vegetation parameters could be built from TT_par for class %d (%s)', VPAR.Class(cell_class), strjoin(II, ', '));
+end
+% Unpack (explicit, replaces v2struct: a parameter added to Parameters_TC.xlsx
+% and needed here must also be added below)
+zatm_surface = TP.zatm_surface;
+ExEM         = TP.ExEM;
+ZR95_H       = TP.ZR95_H;
+ZR95_L       = TP.ZR95_L;
+ZR50_H       = TP.ZR50_H;
+ZR50_L       = TP.ZR50_L;
+ZRmax_H      = TP.ZRmax_H;
+ZRmax_L      = TP.ZRmax_L;
+Sp_LAI_H_In  = TP.Sp_LAI_H_In;
+Sp_LAI_L_In  = TP.Sp_LAI_L_In;
+d_leaf_H     = TP.d_leaf_H;
+d_leaf_L     = TP.d_leaf_L;
+KnitH        = TP.KnitH;
+KnitL        = TP.KnitL;
+mSl_H        = TP.mSl_H;
+mSl_L        = TP.mSl_L;
+FI_H         = TP.FI_H;
+Do_H         = TP.Do_H;
+a1_H         = TP.a1_H;
+go_H         = TP.go_H;
+CT_H         = TP.CT_H;
+DSE_H        = TP.DSE_H;
+Ha_H         = TP.Ha_H;
+gmes_H       = TP.gmes_H;
+rjv_H        = TP.rjv_H;
+FI_L         = TP.FI_L;
+Do_L         = TP.Do_L;
+a1_L         = TP.a1_L;
+go_L         = TP.go_L;
+CT_L         = TP.CT_L;
+DSE_L        = TP.DSE_L;
+Ha_L         = TP.Ha_L;
+gmes_L       = TP.gmes_L;
+rjv_L        = TP.rjv_L;
+Vmax_H       = TP.Vmax_H;
+Vmax_L       = TP.Vmax_L;
+Psi_sto_00_H = TP.Psi_sto_00_H;
+Psi_sto_50_H = TP.Psi_sto_50_H;
+PsiL00_H     = TP.PsiL00_H;
+PsiL50_H     = TP.PsiL50_H;
+Kleaf_max_H  = TP.Kleaf_max_H;
+Cl_H         = TP.Cl_H;
+Axyl_H       = TP.Axyl_H;
+Kx_max_H     = TP.Kx_max_H;
+PsiX50_H     = TP.PsiX50_H;
+Cx_H         = TP.Cx_H;
+Psi_sto_00_L = TP.Psi_sto_00_L;
+Psi_sto_50_L = TP.Psi_sto_50_L;
+PsiL00_L     = TP.PsiL00_L;
+PsiL50_L     = TP.PsiL50_L;
+Kleaf_max_L  = TP.Kleaf_max_L;
+Cl_L         = TP.Cl_L;
+Axyl_L       = TP.Axyl_L;
+Kx_max_L     = TP.Kx_max_L;
+PsiX50_L     = TP.PsiX50_L;
+Cx_L         = TP.Cx_L;
+PsiG50_H     = TP.PsiG50_H;
+PsiG99_H     = TP.PsiG99_H;
+gcoef_H      = TP.gcoef_H;
+PsiG50_L     = TP.PsiG50_L;
+PsiG99_L     = TP.PsiG99_L;
+gcoef_L      = TP.gcoef_L;
+OPT_PROP_H   = TP.OPT_PROP_H;
+OPT_PROP_L   = TP.OPT_PROP_L;
+OM_H         = TP.OM_H;
+OM_L         = TP.OM_L;
+aSE_H        = TP.aSE_H;
+Sl_H         = TP.Sl_H;
+Nl_H         = TP.Nl_H;
+r_H          = TP.r_H;
+gR_H         = TP.gR_H;
+Tcold_H      = TP.Tcold_H;
+age_cr_H     = TP.age_cr_H;
+Trr_H        = TP.Trr_H;
+LtR_H        = TP.LtR_H;
+eps_ac_H     = TP.eps_ac_H;
+fab_H        = TP.fab_H;
+ff_r_H       = TP.ff_r_H;
+Wm_H         = TP.Wm_H;
+dd_max_H     = TP.dd_max_H;
+dc_C_H       = TP.dc_C_H;
+drn_H        = TP.drn_H;
+dsn_H        = TP.dsn_H;
+Mf_H         = TP.Mf_H;
+Klf_H        = TP.Klf_H;
+Bfac_lo_H    = TP.Bfac_lo_H;
+Bfac_ls_H    = TP.Bfac_ls_H;
+Tlo_H        = TP.Tlo_H;
+Tls_H        = TP.Tls_H;
+PAR_th_H     = TP.PAR_th_H;
+dmg_H        = TP.dmg_H;
+LAI_min_H    = TP.LAI_min_H;
+mjDay_H      = TP.mjDay_H;
+LDay_min_H   = TP.LDay_min_H;
+LDay_cr_H    = TP.LDay_cr_H;
+aSE_L        = TP.aSE_L;
+Sl_L         = TP.Sl_L;
+Nl_L         = TP.Nl_L;
+r_L          = TP.r_L;
+gR_L         = TP.gR_L;
+Tcold_L      = TP.Tcold_L;
+dd_max_L     = TP.dd_max_L;
+dc_C_L       = TP.dc_C_L;
+drn_L        = TP.drn_L;
+dsn_L        = TP.dsn_L;
+Mf_L         = TP.Mf_L;
+Klf_L        = TP.Klf_L;
+age_cr_L     = TP.age_cr_L;
+Trr_L        = TP.Trr_L;
+LtR_L        = TP.LtR_L;
+Wm_L         = TP.Wm_L;
+eps_ac_L     = TP.eps_ac_L;
+fab_L        = TP.fab_L;
+ff_r_L       = TP.ff_r_L;
+Bfac_lo_L    = TP.Bfac_lo_L;
+Bfac_ls_L    = TP.Bfac_ls_L;
+Tlo_L        = TP.Tlo_L;
+Tls_L        = TP.Tls_L;
+PAR_th_L     = TP.PAR_th_L;
+dmg_L        = TP.dmg_L;
+LAI_min_L    = TP.LAI_min_L;
+mjDay_L      = TP.mjDay_L;
+LDay_min_L   = TP.LDay_min_L;
+LDay_cr_L    = TP.LDay_cr_L;
 
 %Where:
 %zatm = reference height
@@ -245,7 +389,7 @@ end
 %Was restating parameters
 
 %%% Soil Structural Parameters
-if not(exist('Omac','var'))
+if not(isfield(TP,'Omac'))
     if SPAR == 3
         disp('NOT SPECIFIED SOIL STRUCTURE PARAMETERS')
         return
@@ -255,18 +399,24 @@ if not(exist('Omac','var'))
     Omac = 0.00*Osat; % 0.021*Osat;
     Ks_mac = 100*Ks_Zs; %%[mm/h]
     lVGM =0.5*ones(1,ms); %  %% [-]
+else
+    nVGM = TP.nVGM; alpVGM = TP.alpVGM; Omac = TP.Omac; Ks_mac = TP.Ks_mac; lVGM = TP.lVGM;
 end
 %%% Soil VG modifications
-if not(exist('bVG','var'))
+if not(isfield(TP,'bVG'))
     if SPAR == 1
         disp('NOT SPECIFIED CORRECTION FOR VG')
         return
     end
     s_SVG =zeros(1,ms);
     bVG = zeros(1,ms);
+else
+    s_SVG = TP.s_SVG; bVG = TP.bVG;
 end
-if not(exist('lVG','var'))
+if not(isfield(TP,'lVG'))
     lVG =0.5*ones(1,ms); %  %% [-]
+else
+    lVG = TP.lVG;
 end
 %%%%%%% Soil_Parameters
 Soil_Param.Ks_Zs=Ks_Zs;
@@ -365,12 +515,12 @@ VegH_Param.Kx_max_H=Kx_max_H;
 VegH_Param.PsiX50_H=PsiX50_H;
 VegH_Param.Cx_H=Cx_H;
 
-if not(exist('Osm_reg_Max_H','var'))
+if not(isfield(TP,'Osm_reg_Max_H'))
     VegH_Param.Osm_reg_Max_H = 0*ones(1,cc);
     VegH_Param.eps_root_base_H=  0.9*ones(1,cc);
 else
-    VegH_Param.Osm_reg_Max_H = Osm_reg_Max_H;   
-    VegH_Param.eps_root_base_H=  eps_root_base_H; 
+    VegH_Param.Osm_reg_Max_H = TP.Osm_reg_Max_H;   
+    VegH_Param.eps_root_base_H=  TP.eps_root_base_H; 
 end
 
 %%%%% Vegetation Low Parameters
@@ -398,12 +548,12 @@ VegL_Param.Kx_max_L=Kx_max_L;
 VegL_Param.PsiX50_L=PsiX50_L;
 VegL_Param.Cx_L=Cx_L;
 
-if not(exist('Osm_reg_Max_L','var'))
+if not(isfield(TP,'Osm_reg_Max_L'))
     VegL_Param.Osm_reg_Max_L = 0*ones(1,cc);
     VegL_Param.eps_root_base_L=  0.9*ones(1,cc);
 else
-    VegL_Param.Osm_reg_Max_L = Osm_reg_Max_L;   
-    VegL_Param.eps_root_base_L=  eps_root_base_L; 
+    VegL_Param.Osm_reg_Max_L = TP.Osm_reg_Max_L;   
+    VegL_Param.eps_root_base_L=  TP.eps_root_base_L; 
 end
 
 %%%%% Vegetation High Parameters for vegetation dynamics
@@ -444,14 +594,14 @@ VegH_Param_Dyn.PAR_th =PAR_th_H;
 VegH_Param_Dyn.PsiL50 = PsiL50_H;
 VegH_Param_Dyn.PsiL00 = PsiL00_H;
 
-if not(exist('soCrop_H','var'))
+if not(isfield(TP,'soCrop_H'))
     VegH_Param_Dyn.soCrop = NaN*ones(1,cc);
     VegH_Param_Dyn.MHcrop=  NaN*ones(1,cc);
     VegH_Param_Dyn.Sl_emecrop=  NaN*ones(1,cc);
 else
-    VegH_Param_Dyn.soCrop = soCrop_H;  
-    VegH_Param_Dyn.MHcrop=  MHcrop_H; 
-    VegH_Param_Dyn.Sl_emecrop= Sl_emecrop_H;
+    VegH_Param_Dyn.soCrop = TP.soCrop_H;  
+    VegH_Param_Dyn.MHcrop=  TP.MHcrop_H; 
+    VegH_Param_Dyn.Sl_emecrop= TP.Sl_emecrop_H;
 end
 
 %%%%% Vegetation Low Parameters for vegetation dynamics
@@ -492,14 +642,14 @@ VegL_Param_Dyn.PAR_th =PAR_th_L;
 VegL_Param_Dyn.PsiL50 = PsiL50_L;
 VegL_Param_Dyn.PsiL00 = PsiL00_L;
 
-if not(exist('soCrop_L','var'))
+if not(isfield(TP,'soCrop_L'))
     VegL_Param_Dyn.soCrop = NaN*ones(1,cc);
     VegL_Param_Dyn.MHcrop=  NaN*ones(1,cc);
     VegL_Param_Dyn.Sl_emecrop=  NaN*ones(1,cc);
 else
-    VegL_Param_Dyn.soCrop = soCrop_L;  
-    VegL_Param_Dyn.MHcrop=  MHcrop_L; 
-    VegL_Param_Dyn.Sl_emecrop= Sl_emecrop_L;
+    VegL_Param_Dyn.soCrop = TP.soCrop_L;  
+    VegL_Param_Dyn.MHcrop=  TP.MHcrop_L; 
+    VegL_Param_Dyn.Sl_emecrop= TP.Sl_emecrop_L;
 end
 
 end

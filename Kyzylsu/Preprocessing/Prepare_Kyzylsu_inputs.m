@@ -21,9 +21,9 @@ clc; clear;
 
 %% SETTINGS
 %==========================================================================
-PreProc_folder = 'Kyzylsu_100m_from_Kyzylsu_distributed'; % Must match PreProc_folder in Site_Config_TC.xlsx
+PreProc_folder = 'Kyzylsu_100m_from_Kyzylsu_distributed'; % Must match PreProc_folder in Kyzylsu/Parameters/Site_Config_TC.m
 dtm_in = 'INPUTS/dtm_Kyzylsu_100m.mat'; % dtm used by Launcher_Kyzylsu_Distributed
-dtm_out = 'dtm_Kyzylsu_100m.mat'; % Must match dtm_file in Site_Config_TC.xlsx
+dtm_out = 'dtm_Kyzylsu_100m.mat'; % Must match dtm_file in Kyzylsu/Parameters/Site_Config_TC.m
 
 % Initial snow depth and albedo (diff_IniSND = 1 in the former launcher)
 use_ini_snow = 1; % 1 = replace SNOWD/SNOWALB from the dtm with the files below
