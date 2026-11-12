@@ -99,7 +99,15 @@ OUT_var = {
   'Tdp_L'           'month'     'mean'    'hour'        ''          ''
   'Tdp_H'           'month'     'mean'    'hour'        ''          ''
  % --- Runoff and interception ----------------------------------------------
-  'QpointC'         'day'       'mean'    ''            ''          ''   % outlets: written as a daily time series, not maps
+  % Routing outputs (QpointC, QpointH, UpointC, UpointH), computed at the outlet and the points:
+  % Point period -> columns of the point files (Points/), Map period -> time series (Series/).
+  % Catchment values (Q_exit, Qsub_exit): time series (Series/), period from the Map or Point columns.
+  'QpointC'         ''          ''        'hour'        ''          ''   % discharge at the outlet + points
+  'QpointH'         ''          ''        'hour'        ''          ''   % hillslope outflow at the outlet + points
+  'UpointC'         ''          ''        'hour'        ''          ''   % channel flow velocity at the outlet + points
+  'Q_exit'          ''          ''        'hour'        ''          ''   % surface water leaving the domain
+  'Qsub_exit'       ''          ''        'hour'        ''          ''   % subsurface water leaving the domain
+  'Q_channel'       ''          ''        'hour'        ''          ''   % channel water at the points (stream gauges): water level
   'q_runon'         'month'     'sum'     ''            ''          ''
   'Rd'              'month'     'sum'     ''            ''          ''
   'Rh'              'month'     'sum'     'hour'        ''          ''

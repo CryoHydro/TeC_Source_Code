@@ -100,6 +100,9 @@ switch OM_phase
         for OM_i = 1:OM.nvar
             if exist(OM.var(OM_i).name, 'var')
                 OM_vals{OM_i} = eval(OM.var(OM_i).name);
+                if ismatrix(OM_vals{OM_i}) && ~isvector(OM_vals{OM_i}) && numel(OM_vals{OM_i}) == num_cell
+                    OM_vals{OM_i} = OM_vals{OM_i}(:); % 2-D map (m_cell x n_cell, e.g. Q_channel): one value per cell
+                end
             else
                 OM_missing(OM_i) = true;
             end
@@ -110,7 +113,13 @@ switch OM_phase
         end
 
         if ~OM.ready % first step: sizes of the variables
-            OM = om_build(OM, OM_vals, num_cell, cc_max, Points, NAMEout);
+            % Cells of the routing outputs (QpointC, QpointH, UpointC, UpointH): Xout, Yout
+            if exist('Xout','var') && exist('Yout','var')
+                OM_idx_routed = sub2ind([m_cell n_cell], Yout(:), Xout(:));
+            else
+                OM_idx_routed = [];
+            end
+            OM = om_build(OM, OM_vals, num_cell, cc_max, Points, NAMEout, OM_idx_routed);
         end
 
         [OM, OM_day_end] = om_step(OM, OM_vals, Ccrown_OUTv, OM_date);
@@ -197,7 +206,8 @@ V = V(~(cellfun(@isempty,V(:,2)) & cellfun(@isempty,V(:,4))), :); % variables no
 
 cat = om_catalogue();
 OM.var = struct('name',V(:,1), 'map_period',V(:,2), 'map_func',V(:,3), 'pt_period',V(:,4), ...
-                'pt_func',V(:,5), 'crown',V(:,6), 'units','', 'desc','', 'kind','', 'ncol_in',0, 'cols',{{}});
+                'pt_func',V(:,5), 'crown',V(:,6), 'units','', 'desc','', 'kind','', 'ncol_in',0, 'cols',{{}}, ...
+                'routed',false, 'series_cols',{{}});
 for i = 1:numel(OM.var)
     k = find(strcmp(cat(:,1), OM.var(i).name), 1);
     if isempty(k)
@@ -238,11 +248,33 @@ OM.ckpt_exclude = {'Ta_S','Pr_S','N_S','Tdew_S','SAB1_S','SAB2_S','PARB_S','Pr_r
 end
 
 %--------------------------------------------------------------------------
-function OM = om_build(OM, vals, num_cell, cc_max, Points, NAMEout)
+function OM = om_build(OM, vals, num_cell, cc_max, Points, NAMEout, idx_routed)
 % Sizes and column names of the variables (done at the first step)
+% idx_routed: cells (linear index) of the routing outputs, one per value of
+% QpointC, QpointH, UpointC, UpointH ([] if unknown)
+OM.idx_routed = idx_routed(:);
+OM.num_cell = num_cell;
+missing_pts = ~ismember(Points.idx(:), OM.idx_routed);
 for i = 1:OM.nvar
     v = OM.var(i); X = vals{i};
     if isrow(X) && numel(X) == num_cell; X = X'; end
+    v.routed = false;
+    if numel(X) > 1 && numel(X) == numel(OM.idx_routed) && size(X,1) ~= num_cell && ~isempty(v.pt_period)
+        % Routing output with a Point period: written in the point files
+        % (one value per point, at its cell); also as a series if it has a Map period
+        if any(missing_pts)
+            error('Output_Manager: %s is computed only at the routed cells (Xout, Yout), not at the points %s.', ...
+                v.name, strjoin(cellstr(string(Points.Name(missing_pts))), ', '));
+        end
+        v.kind = 'grid'; v.routed = true; v.ncol_in = 1; v.cols = {v.name};
+        if ~isempty(v.map_period)   % series of the routed cells, as before
+            onames = cellstr(string(NAMEout));
+            if numel(onames) == numel(X); v.series_cols = matlab.lang.makeValidName(onames(:)');
+            else; v.series_cols = compose([v.name '_%d'], 1:numel(X)); end
+        end
+        OM.var(i) = v;
+        continue
+    end
     if size(X,1) == num_cell
         v.kind = 'grid'; v.ncol_in = size(X,2);
         if ~isempty(v.crown)
@@ -259,9 +291,14 @@ for i = 1:OM.nvar
     else % outlet variables (e.g. QpointC): written as time series
         v.kind = 'series'; v.ncol_in = numel(X);
         onames = cellstr(string(NAMEout)); % NAMEout can be a char (one outlet) or a list
-        if numel(onames) == numel(X); v.cols = matlab.lang.makeValidName(onames(:)');
+        if numel(X) == 1 && numel(onames) ~= 1; v.cols = {v.name};     % catchment value (e.g. Q_exit)
+        elseif numel(onames) == numel(X); v.cols = matlab.lang.makeValidName(onames(:)');
         else; v.cols = compose([v.name '_%d'], 1:numel(X)); end
-        if ~isempty(v.pt_period)
+        % Period of the time series: Map period/func, or Point period/func if no
+        % map period is given (needed for hourly series: maps are at most daily)
+        if isempty(v.map_period)
+            v.map_period = v.pt_period; v.map_func = v.pt_func;
+        elseif ~isempty(v.pt_period)
             warning('Output_Manager: %s is not a gridded variable: its point settings are ignored, its map settings define its time series.', v.name);
         end
     end
@@ -270,7 +307,7 @@ end
 
 per = {'hour','day','month','year'};
 % Map accumulators (one per variable)
-im = find(strcmp({OM.var.kind},'grid') & ~cellfun(@isempty,{OM.var.map_period}));
+im = find(strcmp({OM.var.kind},'grid') & ~cellfun(@isempty,{OM.var.map_period}) & ~[OM.var.routed]);
 OM.map = struct('vi',num2cell(im), 'period',{OM.var(im).map_period}, 'func',{OM.var(im).map_func}, ...
                 'A',[], 'n',0, 't0',NaT);
 % Table groups: points (one group per period) and series (one per variable)
@@ -288,6 +325,12 @@ end
 for i = find(strcmp({OM.var.kind},'series') & ~cellfun(@isempty,{OM.var.map_period}))
     g = struct('type','series', 'period',OM.var(i).map_period, 'vi',i, 'funcs',{{OM.var(i).map_func}}, ...
                'files',{{OM.var(i).name}}, 'rows',1, 'cols',{OM.var(i).cols}, ...
+               'A',{cell(1,1)}, 'n',0, 't0',NaT, 'buf',struct('t0',{},'n',{},'V',{}));
+    OM.tab(end+1) = g;
+end
+for i = find([OM.var.routed] & ~cellfun(@isempty,{OM.var.map_period}))   % routing outputs also as series
+    g = struct('type','series', 'period',OM.var(i).map_period, 'vi',i, 'funcs',{{OM.var(i).map_func}}, ...
+               'files',{{OM.var(i).name}}, 'rows',OM.idx_routed, 'cols',{OM.var(i).series_cols}, ...
                'A',{cell(1,1)}, 'n',0, 't0',NaT, 'buf',struct('t0',{},'n',{},'V',{}));
     OM.tab(end+1) = g;
 end
@@ -317,7 +360,16 @@ ends.year  = ends.month && month(d) == 12;
 day_end = ends.day;
 
 X = cell(OM.nvar,1);
-for i = 1:OM.nvar; X{i} = om_prep(OM.var(i), vals{i}, Ccrown); end
+for i = 1:OM.nvar
+    if isfield(OM.var, 'routed') && OM.var(i).routed
+        % Routing output (one value per routed cell) -> value at each routed cell
+        % of the grid, so that the point and series tables can pick their cells
+        Xg = nan(OM.num_cell, 1); Xg(OM.idx_routed) = double(vals{i}(:));
+        X{i} = Xg;
+    else
+        X{i} = om_prep(OM.var(i), vals{i}, Ccrown);
+    end
+end
 
 for k = 1:numel(OM.map)
     m = OM.map(k);
@@ -334,7 +386,9 @@ for k = 1:numel(OM.tab)
     g = OM.tab(k);
     if g.n == 0; g.t0 = dateshift(d, 'start', g.period); end
     for b = 1:numel(g.vi)
-        g.A{b} = om_acc(g.A{b}, X{g.vi(b)}(g.rows,:), g.funcs{b});
+        Xb = X{g.vi(b)}(g.rows,:);
+        if strcmp(g.type,'series') && size(Xb,1) > 1; Xb = Xb'; end % routed series: one row, one column per cell
+        g.A{b} = om_acc(g.A{b}, Xb, g.funcs{b});
     end
     g.n = g.n + 1;
     if ends.(g.period); g = om_tab_close(g); end
@@ -602,8 +656,9 @@ for k = 1:numel(OM.tab)
     g = OM.tab(k);
     for b = 1:numel(g.vi)
         v = OM.var(g.vi(b));
-        for c = 1:numel(v.cols)
-            fprintf(fid, '%s,%s,%s,%s,%s,%s,"%s"\n', g.type, g.period, g.funcs{b}, v.name, v.cols{c}, ...
+        if strcmp(g.type, 'series'); cols = g.cols; else; cols = v.cols; end % series: one column per outlet/cell
+        for c = 1:numel(cols)
+            fprintf(fid, '%s,%s,%s,%s,%s,%s,"%s"\n', g.type, g.period, g.funcs{b}, v.name, cols{c}, ...
                 om_units_out(v.units, g.funcs{b}, g.period), v.desc);
         end
     end
@@ -809,7 +864,13 @@ cat = {
  'Tdp','degC','Soil temperature (per layer)'
  'Tdp_L','degC','Soil temperature of the root zone, low vegetation'
  'Tdp_H','degC','Soil temperature of the root zone, high vegetation'
- 'QpointC','mm/h','Channel outflow at the outlets, as a depth over the outlet cell (x cellsize^2/3.6e6 for m3/s)'
+ 'Q_channel','mm','Water in the channel, as a depth over the cell (x cellsize/channel width for the water depth in the channel)'
+ 'QpointC','mm/h','Channel outflow at the outlet and the points, as a depth over the cell (x cellsize^2/3.6e6 for m3/s)'
+ 'QpointH','mm/h','Hillslope surface outflow at the outlet and the points, as a depth over the cell (x cellsize^2/3.6e6 for m3/s)'
+ 'UpointC','m/s','Channel flow velocity at the outlet and the points'
+ 'UpointH','m/s','Hillslope surface flow velocity at the outlet and the points'
+ 'Q_exit','mm/h','Surface water leaving the domain, as a depth over the catchment'
+ 'Qsub_exit','mm/h','Subsurface water leaving the domain, as a depth over the catchment'
  'q_runon','mm/h','Run-on'
  'Rd','mm/h','Saturation excess runoff'
  'Rh','mm/h','Infiltration excess runoff'

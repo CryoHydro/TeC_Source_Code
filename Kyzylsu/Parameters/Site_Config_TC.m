@@ -16,12 +16,12 @@ CONFIG_vals.UTM_zone_text = '42 N'; % UTM zone for catchment (text)
 %% Run period and output folder
 CONFIG_vals.Run_StartDate = datetime(2021,10,01, 0,0,0); % Run start date and time (year,month,day, hour,min,sec)
 CONFIG_vals.Run_EndDate   = datetime(2022,09,30, 23,0,0); % Run end date and time (last time step)
-CONFIG_vals.Run_Folder    = 'Kyzylsu_Run_02';           % Name of output run folder
+CONFIG_vals.Run_Folder    = 'Kyzylsu_Q_fixed';           % Name of output run folder
 
 %% Restart
 CONFIG_vals.Restart_ID   = 0;                % 0 = new run, 1 = continue an unfinished run from its checkpoint
 CONFIG_vals.Restart_Date = [];               % Date of the checkpoint to restart from, e.g. datetime(2021,10,25); [] = latest checkpoint
-CONFIG_vals.Restart_Run  = 'Kyzylsu_Run_02'; % Name of run to restart from
+CONFIG_vals.Restart_Run  = 'Kyzylsu_Q_fixed'; % Name of run to restart from
 
 %% Model options
 CONFIG_vals.OPT_Forcing   = 4; % Type of forcing: 1 = from AWS which is distributed, 2 = fully gridded, 3 = on-the-fly downscaling,

@@ -508,13 +508,31 @@ Ared=ones(num_cell,1);
 % Flow Boundary Condition
 %--------------------------------------------------------------------------
 %"Xoutlet" & "Youtlet": outlet point, predefined in dtm_XXX.mat-file
-%** Needed for Shallap
-%Xout_long = Xout; %This is the list of POIs (loaded with spatial data)
-%Yout_long = Yout; %This is the list of POIs (loaded with spatial data)
-% *** 
-Xout = Xoutlet; % Location of outlet discharge (column)
-Yout = Youtlet; % Location of outlet discharge (this is the row)
-NAMEout = [site_name '_Outlet'];
+% Cells where the routing computes the discharge (QpointC, QpointH) and the
+% flow velocity (UpointC, UpointH): the outlet, then every point of the POI
+% file (e.g. the stream gauges), except the one(s) on the outlet cell.
+% With a Point period in Output_Config.m they are written in the point files
+% (Points/), with a Map period as time series (Series/, one column per cell).
+% If no point is on the outlet cell, the outlet is added as a point
+% (<site>_Outlet), so that its outputs are written too.
+onOutlet = Points.row == Youtlet & Points.col == Xoutlet;
+if ~any(onOutlet)
+    newPt = Points(1,:);
+    for c = 1:width(newPt)
+        if isnumeric(newPt{1,c}); newPt{1,c} = NaN;
+        elseif isstring(newPt{1,c}); newPt{1,c} = missing; end
+    end
+    newPt.Name = string([site_name '_Outlet']);
+    newPt.col = Xoutlet; newPt.row = Youtlet; newPt.idx = sub2ind([m_cell n_cell], Youtlet, Xoutlet);
+    Points = [Points; newPt];
+    Points_names = string(Points.Name);
+    onOutlet = [onOutlet; true];
+    clear newPt c
+end
+Xout = [Xoutlet; Points.col(~onOutlet)]; % columns
+Yout = [Youtlet; Points.row(~onOutlet)]; % rows
+NAMEout = [string([site_name '_Outlet']); Points_names(~onOutlet)];
+clear onOutlet
 
 Slo_top(Youtlet,Xoutlet)=0.05; %NOTE on maps and in scatter use (X,Y) but to index use Y (row) X (col)
 npoint = length(Xout);
