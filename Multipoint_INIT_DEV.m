@@ -44,7 +44,7 @@ Ws_under(1)=Ws_undertm1(ij);
 %%%%%%%%%%%%%% Volume [mm]
 O(1,:)= Soil_Param.Ofc;
 %%%%%%%%%%%%%%%%%%%
-V(1,:) = (O(1,:) - Soil_Param.Ohy).*dz.*0; % TRYING WITH 0 initial water content in soil
+V(1,:) = Vtm1(ij,:); %(O(1,:) - Soil_Param.Ohy).*dz.*0; % TRYING WITH 0 initial water content in soil
 %cd(cur_dir)
 %%%%%%%%%%%%%%%%%
 
