@@ -20,10 +20,10 @@ This code launches the Point Scale version of TC model.
 %% SITE SETUP
 %==========================================================================
 
-site_num_list = [1 2 3 4]; %Please number sequentially
-site_name_list = {'Shallap' 'Torre_Orsina' 'Hybas_Lvl7_Catchment_2070497830' 'Hybas_Lvl7_Catchment_2070497840'};
+site_num_list = [1 2 3 4 5]; %Please number sequentially
+site_name_list = {'Shallap' 'Torre_Orsina' 'Hybas_Lvl7_Catchment_2070497830' 'Hybas_Lvl7_Catchment_2070497840' 'Pasterze'};
 num_sites = size(site_num_list,2);
-site_num = 4; %Choose site to run, this then selects the correct site directories
+site_num = 5; %Choose site to run, this then selects the correct site directories
 site_name = site_name_list{site_num};
 
 % Choose point or multipoint
@@ -31,7 +31,7 @@ site_name = site_name_list{site_num};
 IniCond.mode = "point";
 
 % if point mode, then select the point
-selected_ID = 1; %(only if running on laptop, SLURM can be used to state when using HPC) 
+selected_ID = 4; %(only if running on laptop, SLURM can be used to state when using HPC) 
 
 %===================================================
 %% Load config info
@@ -75,8 +75,8 @@ ta_lapse_file = CONFIG_vals.ta_lapse_file;  ta_lapse_name = CONFIG_vals.ta_lapse
 pr_lapse_file = CONFIG_vals.pr_lapse_file;  pr_lapse_name = CONFIG_vals.pr_lapse_name; %This is a structure Pr_lapse(m).month where each month has a linear model
 Meteo_el = CONFIG_vals.Meteo_el; %Elevation of station, used if OPT_forcing = 1
 elseif OPT_Forcing == 2
-Directories.forc_meteo = [Directories.forc '/Clusters_BC/'];
-Directories.forc_meteoOD = [Directories.forc '/Clusters_DS/'];
+Directories.forc_meteo = [Directories.forc '/Clusters/biasCorrected/'];
+Directories.forc_meteoOD = [Directories.forc '/Clusters/downscaled/'];
 elseif OPT_Forcing == 3
 meteo_name = CONFIG_vals.forc_meteo_name; %e.g. 'Hybas_Lvl7_Catchment_2070497830_250m'
 end 
@@ -87,12 +87,12 @@ Directories.Optpar = [site_name '/Parameters/Options_and_NoVegParams.xlsx'];
 Directories.VPAR = [site_name,'/Parameters/VPAR_T.xlsx'];
 
 % Preprocessing information
-Directories.PreProc = [site_name '/Preprocessing/OUTPUTS/' CONFIG_vals.PreProc_folder '/']; 
+Directories.PreProc = [site_name '/' CONFIG_vals.PreProc_folder '/']; 
 dtm_file = CONFIG_vals.dtm_file;
 
 % Sub-path points of interest for discharge and multipoints
-Directories.POIs = [site_name '/Preprocessing/OUTPUTS/']; %POI_dtm_Site_50m.txt
-Directories.Multi = [site_name '/Multipoint/OUTPUTS/' site_name '_MultiPoints.txt'];
+%Directories.POIs = [site_name '/Preprocessing/OUTPUTS/']; %POI_dtm_Site_50m.txt
+%Directories.Multi = [site_name '/Multipoint/' site_name '_MultiPoints.txt'];
 
 % Dependencies
 addpath(genpath('Functions')); %Location of additional functions
@@ -139,12 +139,16 @@ disp('Directories and folders done')
 
 % Points of interest
 %--------------------------------------------------------------------------
-POI = readtable([site_name,'/Multipoint/OUTPUTS/' site_name '_MultiPoints.txt']); %import table with points info
+POI = readtable([site_name,'/Multipoint/' site_name '_MultiPoints.csv']); %import table with points info
 UTM_zone = CONFIG_vals.UTM_zone;
 
+%PLEASE NOTE: ELEV as taken in within this file and H_DEB, are those
+%measured/stated at the site, not those extracted from the grid. Normally
+%the extracted values are used except in specific use cases. 
+
 % names of points
-names = string(POI.Name);
-selected_point = string(POI.Name(POI.ID==selected_ID)); %so choose selected point based on selected ID
+names = string(POI.NAME);
+selected_point = string(POI.NAME(POI.ID==selected_ID)); %so choose selected point based on selected ID
 
 % Parameters for vegetation
 %--------------------------------------------------------------------------
@@ -221,10 +225,10 @@ OPT_PARAM_vals = table2struct(OPT_PARAM_vals); %Ok can now get to values using a
 %==========================================================================
 % k = 10;
 for k = 1:height(POI)
-id_location = char(string(POI.Name(k))); %id
+id_location = char(string(POI.NAME(k))); %id
 
-y_coord = POI.LON_UTM(k); %Y - check as Shallap might be wrong!
-x_coord = POI.LAT_UTM(k); %X
+y_coord = POI.Y(k); %Y - check as Shallap might be wrong!
+x_coord = POI.X(k); %X
 
 pos_col = floor((x_coord - xllcorner) / cellsize) + 1;
 pos_row = floor((y_coord - yllcorner) / cellsize) + 1;
@@ -233,7 +237,7 @@ pos_row = floor((y_coord - yllcorner) / cellsize) + 1;
 ij = sub2ind(size(DTM),pos_row, pos_col); % Location
 [j, i] = ind2sub(size(DTM), ij); % Location
 
-POI.ij(k) = ij;
+POI.ij(k) = ij; %This is the index for the NORMAL (or reshaped) grid. 
 POI.i(k) = i; %Same as column
 POI.j(k) = j; %Same as row
 
@@ -341,28 +345,30 @@ elseif OPT_Veg_Param==2
     VPAR.Cbare = mm.CBARE;
 end  
 
-%Reshape
-VPAR.Ccrownr = reshape(VPAR.Ccrown,num_cell,1);
-VPAR.Cwatr = reshape(VPAR.Cwat,num_cell,1);
-VPAR.Curbr = reshape(VPAR.Curb,num_cell,1);
-VPAR.Crockr = reshape(VPAR.Crock,num_cell,1);
-VPAR.Cbarer = reshape(VPAR.Cbare,num_cell,1); 
+% %Reshape
+% VPAR.Ccrownr = reshape(VPAR.Ccrown,num_cell,1);
+% VPAR.Cwatr = reshape(VPAR.Cwat,num_cell,1);
+% VPAR.Curbr = reshape(VPAR.Curb,num_cell,1);
+% VPAR.Crockr = reshape(VPAR.Crock,num_cell,1);
+% VPAR.Cbarer = reshape(VPAR.Cbare,num_cell,1); 
 
 %% Loop for vegetation classification
 
 %Now take from grids directly
 for k = 1:height(POI)
-    loc_p = POI.ij(k); %Index of the point
-    POI.VEG_CLASS(k) = ksv(loc_p); %Landcover
-    POI.Cwat(k) = VPAR.Cwatr(loc_p); % Cwat
-    POI.Curb(k) = VPAR.Curbr(loc_p); %Curb
-    POI.Crock(k) = VPAR.Crockr(loc_p); %Crock
-    POI.Cbare(k) = VPAR.Cbarer(loc_p); %Cbare
-    POI.Ccrown(k) = VPAR.Ccrownr(loc_p); %Ccrown
-    %% CHECK - what if classes are not sequential?
-    POI.II(k) = VPAR.Veg_type(POI.VEG_CLASS(k)); %Veg type name, use the veg number to find
+    row_p = POI.j(k); %Row of the point
+    col_p = POI.i(k); %Column of point
+    POI.VEG_CLASS(k) = VEG_CODE(row_p,col_p); %Landcover
+    POI.Cwat(k) = VPAR.Cwat(row_p,col_p); % Cwat
+    POI.Curb(k) = VPAR.Curb(row_p,col_p); %Curb
+    POI.Crock(k) = VPAR.Crock(row_p,col_p); %Crock
+    POI.Cbare(k) = VPAR.Cbare(row_p,col_p); %Cbare
+    POI.Ccrown(k) = VPAR.Ccrown(row_p,col_p); %Ccrown
+    idvt = VPAR.Class == POI.VEG_CLASS(k); %Find the index in the vpar table for the class, to help find the name
+    POI.II(k) = VPAR.Veg_type(idvt); %Veg type name, use the veg number to find
     POI.NCrown(k) = length(POI.Ccrown(k)); %Number of crown values, in my set up always 1
-    POI.zatm(k) = zatm_surface{:,POI.VEG_CLASS(k)}; %choose correct atmospheric reference height, note the column of zatm_surface = row of VPAR
+    idz = matches(zatm_surface.Properties.VariableNames,POI.II{k});
+    POI.zatm(k) = zatm_surface{:,idz}; %choose correct atmospheric reference height
 end
 POI.cc_max = repmat(max(POI.NCrown),height(POI),1);
 
@@ -452,26 +458,6 @@ if OPT_Forcing == 1
 elseif OPT_Forcing == 2
     t_bef = CONFIG_vals.t_bef;
     t_aft = CONFIG_vals.t_aft;
-
-%========== For On The Fly distributed forcing ======
-elseif OPT_Forcing == 3
-    %Load data
-    OPT_Run_BC = CONFIG_vals.OPT_RunBC;
-    dsERA = load([meteo_name '_ERAdata.mat']);
-    dsGRID = load([meteo_name '_GRIDdata.mat']);
-    dsCoeff = load([meteo_name '_BC_Coefficients.mat']);
-    dim = 'grid';
-    n = 1500;
-    demCurv = getcurvature(dsGRID.demZs,n);
-    dsGRID.pixelSize = abs(dsGRID.demLats(1,1)-dsGRID.demLats(2,1))*111.1e3; % (m)
-    [dsGRID.demSlope,dsGRID.demAspect] = slopeaspect(dsGRID.demZs,dsGRID.pixelSize);
-    % Precipitation gradient + Mean Annual Precipitation
-    dsERA.tpLr = 0.003; % Precipitation gradient (mm yr-1 m-1) - CAREFUL - should this be a param?
-    nYrs = years(Date(end)+(hours(1)) - Date(1));
-    dsERA.tpMean = nansum(dsERA.tp,3)/nYrs;
-    % Set output grids to be the dem grid resolutions (default are provided
-    % bias-correction locations if not)
-    dsGRID.dsLats = dsGRID.demLats; dsGRID.dsLons = dsGRID.demLons; dsGRID.dsZs = dsGRID.demZs;
 end
 
 %Tmod parameters
@@ -545,7 +531,12 @@ Meteo_P.Ta = Ta(id_date_for_run); %For the hour
 %Longwave incoming
 Meteo_P.N = Nin(id_date_for_run);
 %Relative humidity
-Meteo_P.U = U(id_date_for_run)./100; %Change to fraction
+if max(max(Meteo_P.U))>=1
+    Meteo_P.U = U(id_date_for_run)./100; %Change to fraction
+else
+    Meteo_P.U = U(id_date_for_run);
+end
+Meteo_P.U(Meteo_P.U>1)=1; %Cannot be more than 100%
 %Wind speed
 Meteo_P.Ws = Ws(id_date_for_run);
 Meteo_P.Ws(Meteo_P.Ws < 0.01) = 0.01; %Should not be zero, but double check

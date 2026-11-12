@@ -44,7 +44,7 @@ num_cell=numel(DTM);
 
 % ----------- Pull out info for location -------------------
 
-Names = string(POI.Name);
+Names = string(POI.NAME);
 loc = find(Point == Names);  %Finds ID of point
 
 %Definitions of site
@@ -61,16 +61,17 @@ else
 Ccrown = POI.Ccrown(loc);
 end
 zatm = POI.zatm(loc);
-id_location = string(POI.Name(loc));
+id_location = string(POI.NAME(loc));
 cc_max = POI.cc_max(loc);
+veg_code = POI.VEG_CODE(loc);
 
 %% Locations
 Zbas = POI.Zbas(loc);
 Lat = POI.LAT(loc);
 Lon = POI.LON(loc);
-ij = POI.ij(loc);
-ROW = POI.ROW(loc);
-COL = POI.COL(loc);
+ij = POI.ij(loc); %This is for the full grid, OR reshaped
+ROW = POI.j(loc);
+COL = POI.i(loc);
 
 %------------------------------------------------
 % 3. Glacier and snow parameters
@@ -113,6 +114,7 @@ else
     disp(strcat('Constant bare-ice albedo of',{' '},num2str(Aice),{' '},'used'))
 end
 
+afirn = Afirn(ROW,COL);
 Afirn = reshape(Afirn,num_cell,1);
 
 %SNOWD is taken directly and used in intial conditions as initial snow depth
@@ -151,15 +153,19 @@ SNOWD=reshape(SNOWD,num_cell,1);
 %==========================================================================
 
 %Reshape soil variables
-SOIL_TH=reshape(SOIL_TH,num_cell,1);
-PSAN=reshape(PSAN/100,num_cell,1); Psan = PSAN(ij); % Soil sand content at pixel ij
-PCLA=reshape(PCLA/100,num_cell,1);  Pcla = PCLA(ij); % Soil clay content at pixel ij
+PSAN = PSAN./100; Psan = PSAN(ROW,COL); % Soil sand content
+PCLA = PCLA./100; Pcla = PCLA(ROW,COL); % Soil clay content
+
+ % Soil organic content
 if max(max(PORG))>40 %Presume PORG in g/kg not %
-    PORGr=reshape(PORG/1000,num_cell,1);
+    PORG = PORG./1000;
+    Porg = PORG(ROW,COL);
+    PORGr=reshape(PORG,num_cell,1);
 else %PORG brought in as % 
-    PORGr=reshape(PORG/100,num_cell,1);
+    PORG = PORG./100;
+    Porg = PORG(ROW,COL);
+    PORGr=reshape(PORG,num_cell,1);
 end
-Porg = PORGr(ij); % Soil organic content at pixel ij
 
 %  ---  Set Soil thickness and related params ---
 OPT_soil_th = OPT_PARAM_vals.OPT_soil_th;
@@ -171,14 +177,18 @@ if OPT_soil_th == 1
     Zs = Zs_all(Zs_all<=soil_th_max);
     vi = vi_all(Zs_all<=soil_th_max);
     ms_max = size(Zs,2) - 1;
+    soil_th = [];
 elseif OPT_soil_th == 2
     SOIL_TH = SOIL_TH.*10; %Convert cm to mm
     soil_th_max =  max(max(SOIL_TH)); %Max soil thickness, mm
     Zs = Zs_all(Zs_all<=soil_th_max); %Is it ok that the actual max thickness might not be included? Probably as these are at the top of the layer
     vi = vi_all(Zs_all<=soil_th_max);
     ms_max = size(Zs,2) - 1;
+    soil_th = SOIL_TH(ROW,COL);
 end
 ms = ms_max; %ms used in MAIN_FRAME
+
+SOIL_TH=reshape(SOIL_TH,num_cell,1);
 
 %Check
 if max(max(SOIL_TH)) < 50 || max(max(SOIL_TH)) > 5000
@@ -281,7 +291,9 @@ if CONFIG_vals.OPT_Forcing == 1
     c=237.3; b=17.27;
     U = 100*exp((c*b.*(Tdew - Ta))./((c+Ta).*(c+Tdew)));
     clear c b 
+    if max(max(U))>=1
     U = U./100; %Turn into fraction
+    end
     U(U>1) = 1; %Cannot be more than 100%
 
     % Vapor pressure - calculate based on distributed Ta and U
@@ -295,14 +307,13 @@ if CONFIG_vals.OPT_Forcing == 1
 
 elseif CONFIG_vals.OPT_Forcing == 2
     
-    %TO CHECK
     %Load table of data for given point
     %This is for Tom type data
     forc_file = [Directories.forc_meteo char(Point) '.csv']; % Put here the path of where you downloaded the repository
     Meteo_P = readtable(forc_file); % Load forcing table for the current POI
 
     %Crop to run time
-    Forcing_Date =  Meteo_P.dateTime;
+    Forcing_Date =  Meteo_P.Date;
     id_date_for_run = ismember(Forcing_Date,dateRun.list);
     Meteo_P = Meteo_P(id_date_for_run,:);
     
@@ -316,12 +327,18 @@ elseif CONFIG_vals.OPT_Forcing == 2
     Ta = Meteo_P.Ta; %Air temperature, degrees C
     Pr = Meteo_P.Pr; %Precipitation, mm
     Pr(Pr<0.01)=0;
-    N = Meteo_P.Latm; %Longwave radiation, W m-2 (Watch Meteo_P.N is not incoming longwave)
-    U = Meteo_P.U; %Relative humidity, already as a fraction
+    U = Meteo_P.RH; %Relative humidity, %
+    if max(max(U))>=1
+        U = U./100; %Turn into fraction
+    end
+    U(U>1) = 1; %Cannot be more than 100%
+    N = Meteo_P.N; %Longwave radiation, W m-2 
     Ws = Meteo_P.Ws; %Wind speed, ms-1
     Ws(Ws < 0.01) = 0.01;
     Pre = Meteo_P.Pre; %Air pressure, mbar
-    SWin = Meteo_P.Rsw; %Incoming shortwave radiation, Wm-2
+    if max(max(Pre))>10000
+        Pre = Pre./100; %Convert from Pascals to mbar/hectopascal
+    end
     
     %Calculate Tdew
     a=17.27; b=237.3;
@@ -332,19 +349,28 @@ elseif CONFIG_vals.OPT_Forcing == 2
     xr=a.*Ta./(b+Ta)+log10(U); %U here should be a fraction
     Tdew=b.*xr./(a-xr);               %Presumed dewpoint temperature (�C)
     clear a b xr;
-    
-    %Run radiation partition to get the radiation for
-    %distribution
-    %Don't output N (as this would over-right the LW) not t_bef or t_aft
-    GRAPH_VAR=0;
-    Meteo_el = DTM(ROW,COL);
-    dateRun.listnum =datenum(dateRun.list);
-    [SD,SB,SAD1,SAD2,SAB1,SAB2,PARB,PARD,~,Rsws,~,~]=Automatic_Radiation_Partition_I(dateRun.listnum,Lat,Lon,Meteo_el,IniCond.DeltaGMT,Pr,Tdew,SWin,GRAPH_VAR);
-    clear Rsws SD SB 
 
-    SAD1 = SAD1'; SAD2 = SAD2';
-    SAB1 = SAB1'; SAB2 = SAB2';
-    PARB = PARB'; PARD = PARD';
+    %Radiation 
+    SWin = Meteo_P.Swin; %Incoming shortwave radiation, Wm-2
+    SAD1 = Meteo_P.SAD1;
+    SAD2 = Meteo_P.SAD2;
+    SAB1 = Meteo_P.SAB1;
+    SAB2 = Meteo_P.SAB2;
+    PARB = Meteo_P.PARB;
+    PARD = Meteo_P.PARD;
+
+%     %Run radiation partition to get the radiation for
+%     %distribution (if needed)
+%     %Don't output N (as this would over-right the LW) not t_bef or t_aft
+%     GRAPH_VAR=0;
+%     Meteo_el = DTM(ROW,COL);
+%     dateRun.listnum =datenum(dateRun.list);
+%     [SD,SB,SAD1,SAD2,SAB1,SAB2,PARB,PARD,~,Rsws,~,~]=Automatic_Radiation_Partition_I(dateRun.listnum,Lat,Lon,Meteo_el,IniCond.DeltaGMT,Pr,Tdew,SWin,GRAPH_VAR);
+%     clear Rsws SD SB 
+% 
+%     SAD1 = SAD1'; SAD2 = SAD2';
+%     SAB1 = SAB1'; SAB2 = SAB2';
+%     PARB = PARB'; PARD = PARD';
 
 end
 
@@ -408,7 +434,7 @@ if topo == 1
 else
    SvF=1; %% Sky View factor = 1 if topography is not considered
    Slo_top_S = MASKn*0;
-   Slo_top=Slo_top_S(ij);
+   Slo_top=0;
 end
 
 
@@ -452,8 +478,8 @@ end
  In_max_urb,     In_max_rock,    K_usle,         Urb_Par,      Deb_Par,    Zs_deb,      Sllit,...
  Kct,            ExEM,           ParEx_H,      Mpar_H,     ParEx_L,     Mpar_L] = ....
                         PARAMETERS_SOIL_DEV( ...
- ksv(ij),        Psan,       Pcla,     Porg,   DEB,  md_max,...
- Afirn(ij),      SOIL_TH(ij),    VPAR,        TT_par,       OPT_PARAM_vals, Zs, ms_max);
+ veg_code,        Psan,       Pcla,     Porg,   DEB,  md_max,...
+ afirn,      soil_th,    VPAR,        TT_par,       OPT_PARAM_vals, Zs, ms_max);
 
 %These variables were in MOD_PARAM_Multipoint, now given here 
 Asur=(1./cos(atan(Slo_top))); %% Effective Area / Projected Area
@@ -655,7 +681,7 @@ end
 %% Save of the environment
 % Here only for one point - For the snow station. More points can be
 % defined
-% if strcmp(POI{POI.Name == Point,'Feature'}{1}, 'Snow_station')
+% if strcmp(POI{POI.NAME == Point,'Feature'}{1}, 'Snow_station')
 % save(strcat(Directories.save, '5_Env/Env_',id_location,'.mat'))
 % end
 
