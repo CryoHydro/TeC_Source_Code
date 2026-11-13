@@ -1178,6 +1178,7 @@ for t=t_start:N_time_step
         
         T = Ta_S(tt,:); S = SpecHum(tt,:); FF = Ws_S(tt,:); Td = Tdew_S(tt,:);
         K = predict(DECOUPLE_COEFF,[T',S',FF',F',D'])'; % Add into prediction as vector (nx1)
+        K(K<0.2) = 0.2; K(K>1) = 1; %limits of the observations
 
         ValidCooling = ~isnan(F) & ~isnan(D) & T > 0;
 
@@ -1192,6 +1193,7 @@ for t=t_start:N_time_step
 
     % Reconvert to relative humidity (and fraction)
     U_S = exp((237.3*17.227.*(Tdew_S - Ta_S))./((237.3+Ta_S).*(237.3+Tdew_S))); 
+    U_S(U_S>1) = 1; %Cannot be more than 100%
 
     end
 
