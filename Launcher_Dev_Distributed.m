@@ -22,7 +22,7 @@ clc; clear;
 site_num_list = [1 2 3 4]; %Please number sequentially
 site_name_list = {'Shallap' 'Torre_Orsina' 'Hybas_Lvl7_Catchment_2070497830','Kyzylsu'};
 num_sites = size(site_num_list,2);
-site_num = 1; %Choose site to run, this then selects the correct site directories
+site_num = 4; %Choose site to run, this then selects the correct site directories
 site_name = site_name_list{site_num};
 
 %===================================================
@@ -86,7 +86,7 @@ Directories.Optpar = [site_name '/Parameters/Options_and_NoVegParams.xlsx'];
 Directories.VPAR = [site_name,'/Parameters/VPAR_T.xlsx'];
 
 % Preprocessing information
-Directories.PreProc = [site_name '/Grids/']; % %Previously  [site_name '/Preprocessing/OUTPUTS/' CONFIG_vals.PreProc_folder '/']
+Directories.PreProc = [site_name '/Grids/' CONFIG_vals.PreProc_folder '/']; % Directories.PreProc = [site_name '/Grids/'];
 dtm_file = CONFIG_vals.dtm_file;
 
 % Sub-path points of interest for discharge and multipoints
