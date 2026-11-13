@@ -866,8 +866,6 @@ for t=t_start:N_time_step
     hhlast = char(num2str(Datam_S(1,4)));
     Date_run = datetime(Datam_S(1,1), Datam_S(1,2), Datam_S(1,3));
     
-
-
     %% DISTRIBUTED FORCING
     %======================================================================
     % Forcing from stations and distributed across the catchment.
@@ -876,7 +874,7 @@ for t=t_start:N_time_step
 
     %So create new data every month
     %For OPT_Forcing = 4 the forcing is built at every time step (one hour only)
-    if OPT_Forcing == 4 || ~exist('Ta_S', 'var') || str2num(yy) ~= year_loaded || str2num(mth) ~= month_loaded
+    if OPT_Forcing == 4 || ~exist('Ta_Sm', 'var') || str2num(yy) ~= year_loaded || str2num(mth) ~= month_loaded
     if OPT_Forcing == 4
     date_forMonth = Date(t-1); % Only the hour of this time step
     else
@@ -925,13 +923,13 @@ for t=t_start:N_time_step
     %==== Load point data =====
     if OPT_Forcing == 1
         size_time_in_month = sum(id_date_for_month);
-        Ta_S = NaN(size_time_in_month,num_cell);
-        Pr_S = NaN(size_time_in_month,num_cell);
-        N_S = NaN(size_time_in_month,num_cell);
-        Tdew_S = NaN(size_time_in_month,num_cell);
-        SAB1_S = NaN(size_time_in_month,num_cell);
-        SAB2_S = NaN(size_time_in_month,num_cell);
-        PARB_S = NaN(size_time_in_month,num_cell);
+        Ta_Sm = NaN(size_time_in_month,num_cell);
+        Pr_Sm = NaN(size_time_in_month,num_cell);
+        N_Sm = NaN(size_time_in_month,num_cell);
+        Tdew_Sm = NaN(size_time_in_month,num_cell);
+        SAB1_Sm = NaN(size_time_in_month,num_cell);
+        SAB2_Sm = NaN(size_time_in_month,num_cell);
+        PARB_Sm = NaN(size_time_in_month,num_cell);
         Pr_ratio = NaN(size_time_in_month,num_cell);
     
         for tinm = 1:size_time_in_month % run over each hour
@@ -941,54 +939,54 @@ for t=t_start:N_time_step
             Ta_lapse = -hm_Ta_lapse.Ta_lapse(mh_id); % the lapse rate per hour and month - note converting to negative rate
             Tdew_lapse = Ta_lapse; %Its ok to use the same lapse rate
             %Air temperature, degrees C
-            Ta_S(tinm,:) = Ta_P(tinm) + (Ta_lapse.*(DTMn-Meteo_el)); %Lapse rates should be negative
+            Ta_Sm(tinm,:) = Ta_P(tinm) + (Ta_lapse.*(DTMn-Meteo_el)); %Lapse rates should be negative
             %Precipitation, mm - This uses the WRF ratio v el relationship
             Pr_ratio(tinm,:) = (Pr_lapse(m_temp).month.p1.*DTMn) + Pr_lapse(m_temp).month.p2;  %val(x) = p1*x + p2
-            Pr_S(tinm,:) = Pr_ratio(tinm,:).*Pr_P(tinm); %Apply ratio
+            Pr_Sm(tinm,:) = Pr_ratio(tinm,:).*Pr_P(tinm); %Apply ratio
             %Longwave radiation, W m-2
-            N_S(tinm,:) = N_P(tinm) + (Ldown_lapse.*(DTMn-Meteo_el));
+            N_Sm(tinm,:) = N_P(tinm) + (Ldown_lapse.*(DTMn-Meteo_el));
             %Dew point temperature, degrees C
-            Tdew_S(tinm,:) = Tdew_P(tinm) + (Tdew_lapse.*(DTMn-Meteo_el)); %Lapse rates should be negative
+            Tdew_Sm(tinm,:) = Tdew_P(tinm) + (Tdew_lapse.*(DTMn-Meteo_el)); %Lapse rates should be negative
             %Direct radiation with elevation
             if SAB1_P(tinm)>0 %Only if radiation values
-                SAB1_S(tinm,:) = SAB1_P(tinm) + (SAB1_lapse.*(DTMn-Meteo_el)); %Radiation should increase with elevation
+                SAB1_Sm(tinm,:) = SAB1_P(tinm) + (SAB1_lapse.*(DTMn-Meteo_el)); %Radiation should increase with elevation
             else
-                SAB1_S(tinm,:) = 0;
+                SAB1_Sm(tinm,:) = 0;
             end
             if SAB2_P(tinm)>0
-                SAB2_S(tinm,:) = SAB2_P(tinm) + (SAB2_lapse.*(DTMn-Meteo_el)); %Radiation should increase with elevation
+                SAB2_Sm(tinm,:) = SAB2_P(tinm) + (SAB2_lapse.*(DTMn-Meteo_el)); %Radiation should increase with elevation
             else
-                SAB2_S(tinm,:) = 0;
+                SAB2_Sm(tinm,:) = 0;
             end
             if PARB_P(tinm)>0
-            PARB_S(tinm,:) = PARB_P(tinm) + (PARB_lapse.*(DTMn-Meteo_el)); %Radiation should increase with elevation
+            PARB_Sm(tinm,:) = PARB_P(tinm) + (PARB_lapse.*(DTMn-Meteo_el)); %Radiation should increase with elevation
             else 
-                PARB_S(tinm,:) =0;
+                PARB_Sm(tinm,:) =0;
             end
             %Prevent negative values
-            SAB1_S(SAB1_S<0)=0; SAB2_S(SAB2_S<0)=0; PARB_S(PARB_S<0)=0; 
+            SAB1_Sm(SAB1_Sm<0)=0; SAB2_Sm(SAB2_Sm<0)=0; PARB_Sm(PARB_Sm<0)=0; 
         end %Going over time steps within month
     
         %Air pressure (calculated directly from elevation)
         Pre_temp = (101325*((1-(0.0065.*DTMn./288.15)).^(9.18*0.0289644./(8.31447*0.0065))))./100; %/100 converts to mbar
-        Pre_S = repmat(Pre_temp',size_time_in_month,1); %Copy to all time steps
+        Pre_Sm = repmat(Pre_temp',size_time_in_month,1); %Copy to all time steps
     
         %Use the lapsed dew point temprature to derive relative humidity
         c=237.3; b=17.27;
-        U_S = 100*exp((c*b.*(Tdew_S - Ta_S))./((c+Ta_S).*(c+Tdew_S)));
+        U_Sm = 100*exp((c*b.*(Tdew_Sm - Ta_Sm))./((c+Ta_Sm).*(c+Tdew_Sm)));
         clear c b 
-        if max(max(U_S))>=1
-        U_S = U_S./100; %Turn into fraction
-        U_S(U_S>1) = 1; %Cannot be more than 100%
+        if max(max(U_Sm))>=1
+        U_Sm = U_Sm./100; %Turn into fraction
+        U_Sm(U_Sm>1) = 1; %Cannot be more than 100%
         end
     
         %Here we use the same wind speed everywhere
         %At the moment turn into S vector grids
-        Ws_S = repmat(Ws_P,1,num_cell); %So the same in all grid cells
+        Ws_Sm = repmat(Ws_P,1,num_cell); %So the same in all grid cells
         %Diffuse radiation can be the same everywhere
-        SAD1_S = repmat(SAD1_P',1,num_cell); %So the same in all grid cells
-        SAD2_S = repmat(SAD2_P',1,num_cell); %So the same in all grid cells
-        PARD_S = repmat(PARD_P',1,num_cell); %So the same in all grid cell
+        SAD1_Sm = repmat(SAD1_P',1,num_cell); %So the same in all grid cells
+        SAD2_Sm = repmat(SAD2_P',1,num_cell); %So the same in all grid cells
+        PARD_Sm = repmat(PARD_P',1,num_cell); %So the same in all grid cell
     end
 
     %========= Load gridded data ========
@@ -1026,28 +1024,28 @@ for t=t_start:N_time_step
         end
         %Bring into correct names and apply small corrections
         %Also crops in case the run time is shorter
-        Ta_S = double(Forc_S_dc_r.t2m(id_date_for_month,:)); %Air temperature, degrees C
-        Pr_S = double(Forc_S_dc_r.tp(id_date_for_month,:)); %Precipitation, mm
-        U_S = double(Forc_S_dc_r.RH(id_date_for_month,:)); %Relative humidity, %
-        N_S = double(Forc_S_dc_r.strd(id_date_for_month,:)); %Incoming Longwave (note N in the ERA data is cloudiness), Wm^-2
-        Tdew_S = double(Forc_S_dc_r.d2m(id_date_for_month,:)); %Dew point temperature, degrees C
-        Pre_S = double(Forc_S_dc_r.sp(id_date_for_month,:)); %Surface pressure
-        Ws_S = double(Forc_S_dc_r.ws10(id_date_for_month,:)); %Wind speed, ms-1
-        SAB1_S = double(Forc_S_dc_r.SAB1(id_date_for_month,:)); %First band direct radiation, Wm^-2
-        SAB2_S = double(Forc_S_dc_r.SAB2(id_date_for_month,:)); %Second band direct radiation, Wm^-2
-        SAD1_S = double(Forc_S_dc_r.SAD1(id_date_for_month,:)); %First band diffuse radiation, Wm^-2
-        SAD2_S = double(Forc_S_dc_r.SAD2(id_date_for_month,:)); %Second band diffuse radiation, Wm^-2
-        PARB_S = double(Forc_S_dc_r.PARB(id_date_for_month,:)); %PAR radiation direct, Wm^-2
-        PARD_S = double(Forc_S_dc_r.PARD(id_date_for_month,:)); %PAR radiation diffuse Wm^-2
+        Ta_Sm = double(Forc_S_dc_r.t2m(id_date_for_month,:)); %Air temperature, degrees C
+        Pr_Sm = double(Forc_S_dc_r.tp(id_date_for_month,:)); %Precipitation, mm
+        U_Sm = double(Forc_S_dc_r.RH(id_date_for_month,:)); %Relative humidity, %
+        N_Sm = double(Forc_S_dc_r.strd(id_date_for_month,:)); %Incoming Longwave (note N in the ERA data is cloudiness), Wm^-2
+        Tdew_Sm = double(Forc_S_dc_r.d2m(id_date_for_month,:)); %Dew point temperature, degrees C
+        Pre_Sm = double(Forc_S_dc_r.sp(id_date_for_month,:)); %Surface pressure
+        Ws_Sm = double(Forc_S_dc_r.ws10(id_date_for_month,:)); %Wind speed, ms-1
+        SAB1_Sm = double(Forc_S_dc_r.SAB1(id_date_for_month,:)); %First band direct radiation, Wm^-2
+        SAB2_Sm = double(Forc_S_dc_r.SAB2(id_date_for_month,:)); %Second band direct radiation, Wm^-2
+        SAD1_Sm = double(Forc_S_dc_r.SAD1(id_date_for_month,:)); %First band diffuse radiation, Wm^-2
+        SAD2_Sm = double(Forc_S_dc_r.SAD2(id_date_for_month,:)); %Second band diffuse radiation, Wm^-2
+        PARB_Sm = double(Forc_S_dc_r.PARB(id_date_for_month,:)); %PAR radiation direct, Wm^-2
+        PARD_Sm = double(Forc_S_dc_r.PARD(id_date_for_month,:)); %PAR radiation diffuse Wm^-2
 
         %Corrections
-        if max(max(U_S))>=1
-            U_S = U_S./100; %Turn into fraction
-            U_S(U_S>1) = 1; %Cannot be more than 100%
+        if max(max(U_Sm))>=1
+            U_Sm = U_Sm./100; %Turn into fraction
+            U_Sm(U_Sm>1) = 1; %Cannot be more than 100%
         end
-        Ws_S(Ws_S < 0.01) = 0.01; %To prevent 0 turbulent fluxes
-        if max(max(Pre_S))>10000
-        Pre_S = Pre_S./100; %Convert from Pascals to mbar/hectopascal
+        Ws_Sm(Ws_Sm < 0.01) = 0.01; %To prevent 0 turbulent fluxes
+        if max(max(Pre_Sm))>10000
+        Pre_Sm = Pre_Sm./100; %Convert from Pascals to mbar/hectopascal
         end
     end
 
@@ -1098,22 +1096,22 @@ for t=t_start:N_time_step
         v2struct(OTF.downscaled) % this v2struct should stay ideally
     end
 
-    U_S = RH / 100;
+    U_Sm = RH / 100;
     % ADJUST OTHER NAMES HERE (FOR THE CURRENT WORKING CONVENTION) - (30/10/26)
-    Ta_S = Ta;
-    Pr_S = Pr;
-    Ws_S = Ws;
-    N_S = N;
-    Pre_S = Pre;
-    SAB1_S = SAB1;
-    SAB2_S = SAB2;
-    SAD1_S = SAD1;
-    SAD2_S = SAD2;
-    PARB_S = PARB;
-    PARD_S = PARD;
+    Ta_Sm = Ta;
+    Pr_Sm = Pr;
+    Ws_Sm = Ws;
+    N_Sm = N;
+    Pre_Sm = Pre;
+    SAB1_Sm = SAB1;
+    SAB2_Sm = SAB2;
+    SAD1_Sm = SAD1;
+    SAD2_Sm = SAD2;
+    PARB_Sm = PARB;
+    PARD_Sm = PARD;
    
-    Tdew_S = (243.12 .* (log(U_S) + (17.62 .* Ta_S)./(243.12 + Ta_S))) ./ ...
-     (17.62 - (log(U_S) + (17.62 .* Ta_S)./(243.12 + Ta_S)));
+    Tdew_Sm = (243.12 .* (log(U_Sm) + (17.62 .* Ta_Sm)./(243.12 + Ta_Sm))) ./ ...
+     (17.62 - (log(U_Sm) + (17.62 .* Ta_Sm)./(243.12 + Ta_Sm)));
 
     end
 
@@ -1134,27 +1132,27 @@ for t=t_start:N_time_step
             end
             F.(forc_list{v}) = val;
         end
-        Ta_S = F.Ta; Pr_S = F.Pr; U_S = F.U; N_S = F.N; Ws_S = F.Ws; Pre_S = F.Pre;
-        SAB1_S = F.SAB1; SAB2_S = F.SAB2; SAD1_S = F.SAD1; SAD2_S = F.SAD2; PARB_S = F.PARB; PARD_S = F.PARD;
+        Ta_Sm = F.Ta; Pr_Sm = F.Pr; U_Sm = F.U; N_Sm = F.N; Ws_Sm = F.Ws; Pre_Sm = F.Pre;
+        SAB1_Sm = F.SAB1; SAB2_Sm = F.SAB2; SAD1_Sm = F.SAD1; SAD2_Sm = F.SAD2; PARB_Sm = F.PARB; PARD_Sm = F.PARD;
 
         %Corrections (as for OPT_Forcing = 2)
-        if max(U_S(MASKn==1))>1
-            U_S = U_S./100; %Turn into fraction
+        if max(U_Sm(MASKn==1))>1
+            U_Sm = U_Sm./100; %Turn into fraction
         end
-        U_S(U_S>1) = 1; U_S(U_S<0) = 0; %Between 0 and 100%
-        Ws_S(Ws_S < 0.01) = 0.01; %To prevent 0 turbulent fluxes
-        Pr_S(Pr_S < 0) = 0;
-        if max(Pre_S(MASKn==1))>10000
-            Pre_S = Pre_S./100; %Convert from Pascals to mbar/hectopascal
+        U_Sm(U_Sm>1) = 1; U_Sm(U_Sm<0) = 0; %Between 0 and 100%
+        Ws_Sm(Ws_Sm < 0.01) = 0.01; %To prevent 0 turbulent fluxes
+        Pr_Sm(Pr_Sm < 0) = 0;
+        if max(Pre_Sm(MASKn==1))>10000
+            Pre_Sm = Pre_Sm./100; %Convert from Pascals to mbar/hectopascal
         end
 
         %Dew point temperature: from the function, or from Ta and U (same formula as OPT_Forcing = 1)
         if isfield(F,'Tdew')
-            Tdew_S = F.Tdew;
+            Tdew_Sm = F.Tdew;
         else
             a=17.27; b=237.3;
-            xr = a.*Ta_S./(b+Ta_S) + log10(U_S);
-            Tdew_S = b.*xr./(a-xr);
+            xr = a.*Ta_Sm./(b+Ta_Sm) + log10(U_Sm);
+            Tdew_Sm = b.*xr./(a-xr);
             clear a b xr
         end
         clear F val v forc_list
@@ -1166,16 +1164,16 @@ for t=t_start:N_time_step
     % Glacier Cooling Effect - Shaw et al. (2025)
     load('ModelCoefficients_Decoupling.mat'); % Should be in 'Functions' path that is already generated
     
-    SpecHum = convert_humidity(Pre_S*100,Ta_S+273.15,U_S*100,'relative humidity','specific humidity');
+    SpecHum = convert_humidity(Pre_Sm*100,Ta_Sm+273.15,U_Sm*100,'relative humidity','specific humidity');
     
     D = DTM(:)'; F = FPL(:)'; % NEED TO CHANGE ORIENTATION OF GRIDS?
 
-    for tt = 1:size(Ta_S,1)
+    for tt = 1:size(Ta_Sm,1)
         
-        Swin = SAD1_S + SAB1_S + SAD2_S + SAB2_S;
+        Swin = SAD1_Sm + SAB1_Sm + SAD2_Sm + SAB2_Sm;
         if min(Swin(tt,:),[],'all') > 30 % day time only (without very overcast conditions)
         
-        T = Ta_S(tt,:); S = SpecHum(tt,:); FF = Ws_S(tt,:); Td = Tdew_S(tt,:);
+        T = Ta_Sm(tt,:); S = SpecHum(tt,:); FF = Ws_Sm(tt,:); Td = Tdew_Sm(tt,:);
         K = predict(DECOUPLE_COEFF,[T',S',FF',F',D'])'; % Add into prediction as vector (nx1)
         K(K<0.2) = 0.2; K(K>1) = 1; %limits of the observations
 
@@ -1184,15 +1182,15 @@ for t=t_start:N_time_step
         Td(ValidCooling) = Td(ValidCooling) .* K(ValidCooling);      
         T(ValidCooling) = T(ValidCooling) .* K(ValidCooling);
                   
-        Ta_S(tt,:) = T;
-        Tdew_S(tt,:) = Td;
+        Ta_Sm(tt,:) = T;
+        Tdew_Sm(tt,:) = Td;
 
         end
     end
 
     % Reconvert to relative humidity (and fraction)
-    U_S = exp((237.3*17.227.*(Tdew_S - Ta_S))./((237.3+Ta_S).*(237.3+Tdew_S))); 
-    U_S(U_S>1) = 1; %Cannot be more than 100%
+    U_Sm = exp((237.3*17.227.*(Tdew_Sm - Ta_Sm))./((237.3+Ta_Sm).*(237.3+Tdew_Sm))); 
+    U_Sm(U_Sm>1) = 1; %Cannot be more than 100%
 
     end
 
@@ -1200,17 +1198,17 @@ for t=t_start:N_time_step
     % Vapor pressure - calculate based on distributed Ta and U
     % esat/ea/Ds/Tdew grids of month of time x cell
     a=17.27; b=237.3;
-    esat_S=611.*exp(a.*Ta_S./(b+Ta_S)); %Vapour pressure at saturation (Pa)
-    ea_S=U_S.*esat_S;                 %Vapour pressure (Pa)
-    Ds_S= esat_S - ea_S;              %Vapor Pressure Deficit (Pa)
-    Ds_S(Ds_S<0)=0; 
+    esat_Sm=611.*exp(a.*Ta_Sm./(b+Ta_Sm)); %Vapour pressure at saturation (Pa)
+    ea_Sm=U_Sm.*esat_Sm;                 %Vapour pressure (Pa)
+    Ds_Sm= esat_Sm - ea_Sm;              %Vapor Pressure Deficit (Pa)
+    Ds_Sm(Ds_Sm<0)=0; 
     %Don't recalculate Tdew - its above
     %NOTE SHOULD WE ADJUST DEW POINT WITH LOWER AIR TEMP FROM TMOD?
     clear a b xr;
 
     %---- Check variables -----
     %We only check inside the mask in case there are NaNs outside.
-    check_var_3D(Ta_S(:,MASKn==1),Tdew_S(:,MASKn==1),Pr_S(:,MASKn==1),N_S(:,MASKn==1),Ws_S(:,MASKn==1),Pre_S(:,MASKn==1),esat_S(:,MASKn==1),ea_S(:,MASKn==1),U_S(:,MASKn==1),SAD1_S(:,MASKn==1),SAD2_S(:,MASKn==1),SAB1_S(:,MASKn==1),SAB2_S(:,MASKn==1),PARB_S(:,MASKn==1),PARD_S(:,MASKn==1));
+    check_var_3D(Ta_Sm(:,MASKn==1),Tdew_Sm(:,MASKn==1),Pr_Sm(:,MASKn==1),N_Sm(:,MASKn==1),Ws_Sm(:,MASKn==1),Pre_Sm(:,MASKn==1),esat_Sm(:,MASKn==1),ea_Sm(:,MASKn==1),U_Sm(:,MASKn==1),SAD1_Sm(:,MASKn==1),SAD2_Sm(:,MASKn==1),SAB1_Sm(:,MASKn==1),SAB2_Sm(:,MASKn==1),PARB_Sm(:,MASKn==1),PARD_Sm(:,MASKn==1));
     
 %   % Store year and month loaded
 %   %----------------------------------------------------------------------
@@ -1227,29 +1225,29 @@ for t=t_start:N_time_step
     %And the partition of SW
     
     %Export timestep (a row for all the cells)
-    Ta_St = Ta_S(t_forc,:);
-    Pr_St = Pr_S(t_forc,:);
-    N_St = N_S(t_forc,:);
-    Pre_St = Pre_S(t_forc,:);
-    Ws_St = Ws_S(t_forc,:);
-    U_St = U_S(t_forc,:);
-    ea_St = ea_S(t_forc,:);
-    Ds_St = Ds_S(t_forc,:);
-    Tdew_St = Tdew_S(t_forc,:);
-    SAD1_St = SAD1_S(t_forc,:);
-    SAD2_St = SAD2_S(t_forc,:);
-    SAB1_St = SAB1_S(t_forc,:);
-    SAB2_St = SAB2_S(t_forc,:);
-    PARB_St = PARB_S(t_forc,:);
-    PARD_St = PARD_S(t_forc,:);
+    Ta_S = Ta_Sm(t_forc,:);
+    Pr_S = Pr_Sm(t_forc,:);
+    N_S = N_Sm(t_forc,:);
+    Pre_S = Pre_Sm(t_forc,:);
+    Ws_S = Ws_Sm(t_forc,:);
+    U_S = U_Sm(t_forc,:);
+    ea_S = ea_Sm(t_forc,:);
+    Ds_S = Ds_Sm(t_forc,:);
+    Tdew_S = Tdew_Sm(t_forc,:);
+    SAD1_S = SAD1_Sm(t_forc,:);
+    SAD2_S = SAD2_Sm(t_forc,:);
+    SAB1_S = SAB1_Sm(t_forc,:);
+    SAB2_S = SAB2_Sm(t_forc,:);
+    PARB_S = PARB_Sm(t_forc,:);
+    PARD_S = PARD_Sm(t_forc,:);
 
     %% Sort Ta for day before
     if t == fts
-        Ta_Spdind = Ta_St;
+        Ta_Spdind = Ta_S;
     elseif t > fts && t < fts+24
-        Ta_Spdind = [Ta_Spdind;Ta_St];
+        Ta_Spdind = [Ta_Spdind;Ta_S];
     elseif t >= fts+24
-        Ta_Spdind = [Ta_Spdind(2:24,:);Ta_St];
+        Ta_Spdind = [Ta_Spdind(2:24,:);Ta_S];
     end
 
     %% 
@@ -1278,32 +1276,32 @@ for t=t_start:N_time_step
 
     %rho_g and h_S are scalars
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    SAD1_St = SAD1_St.*SvFn + Ctn.*rho_g.*(SAD1_St./sin(h_S).*cos_fstn + (1-SvFn).*SAD1_St);
-    SAD2_St = SAD2_St.*SvFn + Ctn.*rho_g.*(SAD2_St./sin(h_S).*cos_fstn + (1-SvFn).*SAD2_St);
-    PARD_St = PARD_St.*SvFn + Ctn.*rho_g.*(PARD_St./sin(h_S).*cos_fstn + (1-SvFn).*PARD_St);
+    SAD1_S = SAD1_S.*SvFn + Ctn.*rho_g.*(SAD1_S./sin(h_S).*cos_fstn + (1-SvFn).*SAD1_S);
+    SAD2_S = SAD2_S.*SvFn + Ctn.*rho_g.*(SAD2_S./sin(h_S).*cos_fstn + (1-SvFn).*SAD2_S);
+    PARD_S = PARD_S.*SvFn + Ctn.*rho_g.*(PARD_S./sin(h_S).*cos_fstn + (1-SvFn).*PARD_S);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    SAB1_St =(SAB1_St./sin(h_S)).*cos_fstn.*ShFn;
-    SAB2_St =(SAB2_St./sin(h_S)).*cos_fstn.*ShFn;
-    PARB_St = (PARB_St./sin(h_S)).*cos_fstn.*ShFn;        
+    SAB1_S =(SAB1_S./sin(h_S)).*cos_fstn.*ShFn;
+    SAB2_S =(SAB2_S./sin(h_S)).*cos_fstn.*ShFn;
+    PARB_S = (PARB_S./sin(h_S)).*cos_fstn.*ShFn;        
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    SAB1_St(SAB1_St<0)=0;
-    SAB2_St(SAB2_St<0)=0;
-    PARB_St(PARB_St<0)=0;
-    PARD_St(PARD_St<0)=0;
-    SAD1_St(SAD1_St<0)=0;
-    SAD2_St(SAD2_St<0)=0;
-    SAB1_St(isnan(SAB1_St)) = 0;
-    SAB2_St(isnan(SAB2_St)) = 0;
-    SAD1_St(isnan(SAD1_St)) = 0;
-    SAD2_St(isnan(SAD2_St)) = 0;
-    PARB_St(isnan(PARB_St)) = 0;
-    PARD_St(isnan(PARD_St)) = 0;
+    SAB1_S(SAB1_S<0)=0;
+    SAB2_S(SAB2_S<0)=0;
+    PARB_S(PARB_S<0)=0;
+    PARD_S(PARD_S<0)=0;
+    SAD1_S(SAD1_S<0)=0;
+    SAD2_S(SAD2_S<0)=0;
+    SAB1_S(isnan(SAB1_S)) = 0;
+    SAB2_S(isnan(SAB2_S)) = 0;
+    SAD1_S(isnan(SAD1_S)) = 0;
+    SAD2_S(isnan(SAD2_S)) = 0;
+    PARB_S(isnan(PARB_S)) = 0;
+    PARD_S(isnan(PARD_S)) = 0;
 
     % Sun below ~5.7 deg: the slope correction (division by sin(h_S)) is unstable;
     % set all shortwave to 0, as in the former launcher
     if sin(h_S) <= 0.10
-        SAB1_St(:) = 0; SAB2_St(:) = 0; SAD1_St(:) = 0; SAD2_St(:) = 0; PARB_St(:) = 0; PARD_St(:) = 0;
+        SAB1_S(:) = 0; SAB2_S(:) = 0; SAD1_S(:) = 0; SAD2_S(:) = 0; PARB_S(:) = 0; PARD_S(:) = 0;
     end
        
     %% Carbon
@@ -1507,15 +1505,15 @@ for t=t_start:N_time_step
                 HYDROLOGY_MODULE_PAR(...
      Vtm1(ij,:),            Oicetm1(ij,:),       aR,               Zs,                  EvL_Zs, ...
      Inf_Zs,                Zinf,                RfH_Zs,           RfL_Zs,              dz,  ...
-     Dz,                    ms,                  Kbot,             Pr_St(ij),           Ta_St(ij), ...
-     Ds_St(ij),             Ws_St(ij),           zatm,             Tstm1(ij),           dt, ...
-     dth,                   ea_St(ij),           N_St(ij),         Pre_St(ij),          Tstm0(ij), ...
+     Dz,                    ms,                  Kbot,             Pr_S(ij),           Ta_S(ij), ...
+     Ds_S(ij),             Ws_S(ij),           zatm,             Tstm1(ij),           dt, ...
+     dth,                   ea_S(ij),           N_S(ij),         Pre_S(ij),          Tstm0(ij), ...
      LAI_H(ij,:),           SAI_H(ij,:),         LAI_L(ij,:),      SAI_L(ij,:),         LAIdead_H(ij,:), ...
      LAIdead_L(ij,:),       Rrootl_H(ij,:),      Rrootl_L(ij,:),   BLit(ij,:),          Sllit,   ...
      Kct,                   Datam_S,             IniCond.DeltaGMT, Lon,                 Lat,     ...
      t_bef,                 t_aft,               Ccrown,        Cbare,               Crock,  ...
-     Curb,                  Cwat,                SAB1_St(ij),      SAB2_St(ij),         SAD1_St(ij), ...
-     SAD2_St(ij),           PARB_St(ij),         PARD_St(ij),      SvFn(ij),            SNDtm1(ij),  ...
+     Curb,                  Cwat,                SAB1_S(ij),      SAB2_S(ij),         SAD1_S(ij), ...
+     SAD2_S(ij),           PARB_S(ij),         PARD_S(ij),      SvFn(ij),            SNDtm1(ij),  ...
      snow_albedotm1(ij,:),  Color_Class,         OM_H,             OM_L,                PFT_opt_H,     ...
      PFT_opt_L,             hc_H(ij,:),          hc_L(ij,:),       d_leaf_H,            d_leaf_L,     ...
      Soil_Param,            Interc_Param,        SnowIce_Param,    VegH_Param,          VegL_Param,  ...
@@ -1527,7 +1525,7 @@ for t=t_start:N_time_step
      ICEtm1(ij),            IP_wctm1(ij),        ICE_Dtm1(ij),     Cicewtm1(ij),        Vx_Htm1(ij,:), ...
      Vl_Htm1(ij,:),         Vx_Ltm1(ij,:),       Vl_Ltm1(ij,:),    Psi_x_Htm1(ij,:),    Psi_l_Htm1(ij,:), ...
      Psi_x_Ltm1(ij,:),      Psi_l_Ltm1(ij,:),    ZR95_H,           ZR95_L,              FROCKtm1(ij),  ...
-     Krock,                 Urb_Par,             Deb_Par,          Zs_deb,              Tdew_St(ij), ...
+     Krock,                 Urb_Par,             Deb_Par,          Zs_deb,              Tdew_S(ij), ...
      t_slstm1(ij),          rostm1(ij),          SP_wctm1(ij),     fpr,                 IrD_S(ij), ...
      In_max_urb,            In_max_rock,         K_usle,           tau_snotm1(ij),      Ta_Spdind(:,ij), ...
      Slo_top2(ij),          Slo_head(ij,:),      Asur(ij),         Ared(ij),            aTop(ij), ...
@@ -1853,7 +1851,7 @@ end
         O_t(:,:,1:23)=          O_t(:,:,2:24);
         O_t(:,:,24)=            O;
         PAR_t(:,1:23)=          PAR_t(:,2:24);
-        PAR_t(:,24)=            PARB_St + PARD_St;
+        PAR_t(:,24)=            PARB_S + PARD_S;
         Pr_sno_t(:,1:23)=       Pr_sno_t(:,2:24);
         Pr_sno_t(:,24)=         Pr_sno;
         Psi_l_H_t(:,:,1:23)=    Psi_l_H_t(:,:,2:24);
@@ -1869,7 +1867,7 @@ end
         Rdark_L_t(:,:,1:23)=    Rdark_L_t(:,:,2:24);
         Rdark_L_t(:,:,24)=      Rdark_L;
         Ta_t(:,1:23)=           Ta_t(:,2:24);
-        Ta_t(:,24)=             Ta_St;
+        Ta_t(:,24)=             Ta_S;
         Tdp_H_t(:,:,1:23)=      Tdp_H_t(:,:,2:24);
         Tdp_H_t(:,:,24)=        Tdp_H;
         Tdp_L_t(:,:,1:23)=      Tdp_L_t(:,:,2:24);
@@ -1882,7 +1880,7 @@ end
         An_H_t(:,:,t)=          An_H;
         An_L_t(:,:,t)=          An_L;
         O_t(:,:,t)=             O;
-        PAR_t(:,24)=            PARB_St + PARD_St;
+        PAR_t(:,24)=            PARB_S + PARD_S;
         Pr_sno_t(:,t)=          Pr_sno;
         Psi_l_H_t(:,:,t)=       Psi_l_H;
         Psi_l_L_t(:,:,t)=       Psi_l_L;
@@ -1890,7 +1888,7 @@ end
         Psi_x_L_t(:,:,t)=       Psi_x_L;
         Rdark_H_t(:,:,t)=       Rdark_H;
         Rdark_L_t(:,:,t)=       Rdark_L;
-        Ta_t(:,t)=              Ta_St;
+        Ta_t(:,t)=              Ta_S;
         Tdp_H_t(:,:,t)=         Tdp_H;
         Tdp_L_t(:,:,t)=         Tdp_L;
         Tdp_t(:,:,t)=           Tdp;
