@@ -23,7 +23,7 @@ This code launches the Point Scale version of TC model.
 site_num_list = [1 2 3 4 5]; %Please number sequentially
 site_name_list = {'Shallap' 'Torre_Orsina' 'Hybas_Lvl7_Catchment_2070497830' 'Hybas_Lvl7_Catchment_2070497840' 'Pasterze'};
 num_sites = size(site_num_list,2);
-site_num = 5; %Choose site to run, this then selects the correct site directories
+site_num = 1; %Choose site to run, this then selects the correct site directories
 site_name = site_name_list{site_num};
 
 % Choose point or multipoint
@@ -38,12 +38,16 @@ selected_ID = 4; %(only if running on laptop, SLURM can be used to state when us
 %==================================================
 
 % Sub-path for Config file
-Directories.config = [site_name '/Parameters/Site_config_TC.xlsx'];
-
-CONFIG = readcell(Directories.config);
-CON_vals_id = find(CONFIG(1,:)=="Value");
-CON_label_id = find(CONFIG(1,:)=="Variable");
-CONFIG_vals = cell2struct(CONFIG(2:end,CON_vals_id),CONFIG(2:end,CON_label_id)'); %Now a structure of the config info
+% Config file: plain MATLAB script that defines the structure CONFIG_vals.
+% Another file can be chosen without editing this launcher, e.g. in an HPC job script:
+%   export TC_CONFIG=Kyzylsu/Parameters/Site_Config_Run03.m
+Directories.config = getenv('TC_CONFIG');
+if isempty(Directories.config)
+    Directories.config = [site_name '/Parameters/Site_Config_TC.m'];
+end
+if ~isfile(Directories.config); error('Config file not found: %s', Directories.config); end
+fprintf('Config file: %s\n', Directories.config);
+run(Directories.config); % defines CONFIG_vals
 
 IniCond.DeltaGMT = CONFIG_vals.DeltaGMT; %Define change from GMT
 IniCond.run_folder = CONFIG_vals.Run_Folder; %Define folder to save outputs
@@ -87,7 +91,7 @@ Directories.Optpar = [site_name '/Parameters/Options_and_NoVegParams.xlsx'];
 Directories.VPAR = [site_name,'/Parameters/VPAR_T.xlsx'];
 
 % Preprocessing information
-Directories.PreProc = [site_name '/' CONFIG_vals.PreProc_folder '/']; 
+Directories.PreProc = [site_name '/Grids/' CONFIG_vals.PreProc_folder '/']; 
 dtm_file = CONFIG_vals.dtm_file;
 
 % Sub-path points of interest for discharge and multipoints
@@ -97,7 +101,7 @@ dtm_file = CONFIG_vals.dtm_file;
 % Dependencies
 addpath(genpath('Functions')); %Location of additional functions
 addpath(genpath([site_name '/Forcing'])); % Add path to Ca_Data
-addpath(genpath([site_name '/Preprocessing/OUTPUTS'])); % Where are distributed model set-up files 
+%addpath(genpath([site_name '/Preprocessing/OUTPUTS'])); % Where are distributed model set-up files 
 addpath(genpath('T&C_Code')); %T&C source code 
 addpath(genpath('Outputs'));
 
@@ -379,15 +383,14 @@ disp('POI and veg params done')
 
 %Save the parameter files with the model outputs
 %Clean CONFIG for saving
-CONFIG_s = CONFIG;
-Cmask = cellfun(@(CONFIG_s) any(isa(CONFIG_s,'missing')), CONFIG_s);
-CONFIG_s(Cmask) = {[]}; % 
+CONFIG_s = struct2table(CONFIG_vals,AsArray=true);
+CONFIG_s = rows2vars(CONFIG_s); CONFIG_s.Properties.VariableNames = {'Variable','Value'};
 
 writetable(POI, [Directories.save '6_POI_table/POI_' IniCond.run_folder '.xlsx']);
 writetable(TT_par,[Directories.save '3_Parameters/' 'TT_par.xlsx']);
 writetable(OPT_PARAM,[Directories.save '3_Parameters/' 'OPT_PARAM.xlsx']);
 writetable(VPAR_T,[Directories.save '3_Parameters/' 'VPAR_T.xlsx']);
-writecell(CONFIG_s,[Directories.save '3_Parameters/' 'CONFIG.xlsx']);
+writetable(CONFIG_s,[Directories.save '3_Parameters/' 'CONFIG.xlsx']);
 
 %-----------------------------------------------------------------------
 % 3. Glacier and snow parameters - in Dev_run_Point_Pro
@@ -531,7 +534,7 @@ Meteo_P.Ta = Ta(id_date_for_run); %For the hour
 %Longwave incoming
 Meteo_P.N = Nin(id_date_for_run);
 %Relative humidity
-if max(max(Meteo_P.U))>=1
+if max(max(U))>=1
     Meteo_P.U = U(id_date_for_run)./100; %Change to fraction
 else
     Meteo_P.U = U(id_date_for_run);

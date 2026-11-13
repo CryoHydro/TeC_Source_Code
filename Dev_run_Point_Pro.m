@@ -63,7 +63,7 @@ end
 zatm = POI.zatm(loc);
 id_location = string(POI.NAME(loc));
 cc_max = POI.cc_max(loc);
-veg_code = POI.VEG_CODE(loc);
+veg_code = POI.VEG_CLASS(loc);
 
 %% Locations
 Zbas = POI.Zbas(loc);
