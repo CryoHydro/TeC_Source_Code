@@ -7,9 +7,6 @@
 %%%%%%%% INITIZIALIZATION VARIABLE
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% Debugger
-%disp(strcat('Initial MAIN_FRAME:',num2str(size(Ca,2))))
-
 %% Variables
 %==========================================================================
 %{
@@ -230,16 +227,6 @@ ZR95_Ht =zeros(NNd,cc); ZR95_Lt =zeros(NNd,cc);
 OPT_SoilBiogeochemistry = OPT_PARAM_vals.OPT_SoilBiogeochemistry;
 OPT_BG = OPT_SoilBiogeochemistry;
 
-% if  not(exist('OPT_BG','var'))
-%     OPT_SoilBiogeochemistry = 0;
-% else
-%     if  OPT_BG == 0
-%         OPT_SoilBiogeochemistry = 0;
-%     else
-%         OPT_SoilBiogeochemistry = 1;
-%     end 
-% end
-
 %%%%%%%%%%%%%
 if OPT_SoilBiogeochemistry == 1
     P=zeros(NNd,55);
@@ -275,45 +262,12 @@ if OPT_SoilBiogeochemistry == 1
     RexmyI=zeros(NNd,3);
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%% CALL INITIAL CONDITIONS
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ---------------------------------------------------------
+%% CALL INITIAL CONDITIONS
+% ----------------------------------------------------------
 run('Multipoint_INIT_DEV.m'); %Only extra initial conditions, previously in PARAM_IC
 
-%disp(cc)
-%% Definition of Veg_Optical_Parameter
-%==========================================================================
-% These parameters defined here as it gives an error in the parfor when 
-% stored in the MOD_PARAM_Multipoint file. Potential problem with cc within
-% MOD_PARAM_Multipoint file..
-%==========================================================================
-%II = [0 0 0 0]>0
-
-%% These parameters are strange. They need to be defined when Crock, Cbare, Cwat =1
-
-%==========================================================================
-% CHECK
-%==========================================================================
-% for i=1:cc
-%     %%%%%%%% Vegetation Optical Parameter
-%     [PFT_opt_H(i)]=Veg_Optical_Parameter(OPT_PROP_H(i));
-%     [PFT_opt_L(i)]=Veg_Optical_Parameter(OPT_PROP_L(i));
-% 
-%     [Stoich_H(i)]=Veg_Stoichiometric_Parameter(Nl_H(i));
-%     [ParEx_H(i)]=Exudation_Parameter(0);
-%     [Mpar_H(i)]=Vegetation_Management_Parameter;
-% 
-%     [Stoich_L(i)]=Veg_Stoichiometric_Parameter(Nl_L(i));
-%     [ParEx_L(i)]=Exudation_Parameter(0);
-%     [Mpar_L(i)]=Vegetation_Management_Parameter;
-% end
-
-
-%Restating_parameters;
-
-% if length(Oice)==1
-%     Oice=zeros(NN,ms);
-% end
+%Restating_parameters; %Now in Parameters_Soil
 
 %%%%%%%%%%
 Tdeb =zeros(NN,max(1,length(Zs_deb)-1));
@@ -349,39 +303,23 @@ OPT_PH = OPT_Num.OPT_PH;    % for internal plant hydraulic
 OPT_STh = OPT_Num.OPT_STh;  % for heat transfer (note this is much smaller for distributed) 5e+3 c/f 0.02 originally
 
 %Release the Options here
-To_release = {'fieldNames','OPT_VegSnow','OPT_SoilTemp','OPT_FR_SOIL','min_SPD','OPT_VCA','OPT_ALLOME','OPT_PlantHydr','OPT_EnvLimitGrowth'};
-v2struct(OPT_PARAM_vals,To_release);
+OPT_VegSnow = OPT_PARAM_vals.OPT_VegSnow;
+OPT_SoilTemp = OPT_PARAM_vals.OPT_SoilTemp;
+OPT_FR_SOIL = OPT_PARAM_vals.OPT_FR_SOIL;
+min_SPD = OPT_PARAM_vals.min_SPD;
+OPT_VCA = OPT_PARAM_vals.OPT_VCA;
+OPT_ALLOME= OPT_PARAM_vals.OPT_ALLOME;
+OPT_PlantHydr = OPT_PARAM_vals.OPT_PlantHydr;
+OPT_EnvLimitGrowth = OPT_PARAM_vals.OPT_EnvLimitGrowth;
+OPT_DROOT = OPT_PARAM_vals.OPT_DROOT;
+OPT_WET = OPT_PARAM_vals.OPT_WET;
 
-%OPT_VegSnow = 1;                                           % Option for computing energy budget of vegetation when there is snow at the ground   
-%OPT_SoilTemp = 1;                                          % Option for computing soil temperature or not. 
-%OPT_FR_SOIL = 1;      % whether you want soil freezing on or off. Mike found that it was causing problems for Maipo streamflow, so I turned it off
-%OPT_min_SPD = 0.006;  % [m] minimum snow pack depth to have a multilayer snow 
-
-%%%%
-% if  not(exist('OPT_VCA','var'))
-%     OPT_VCA = 0;
-%     OPT_ALLOME = 0;
-% end
-if  not(exist('OPT_DROOT','var'))
-    OPT_DROOT = 0;
-end
-% if  not(exist('OPT_PlantHydr','var'))
-%     OPT_PlantHydr = 0;
-% end
-% if  not(exist('OPT_EnvLimitGrowth','var'))
-%     OPT_EnvLimitGrowth = 0;
-% end
-if  not(exist('OPT_WET','var'))
-    OPT_WET = 0;
-else
+if  OPT_WET == 1
     if  not(exist('Wlev','var'))
         Wlev=zeros(NN,1);
     end
     Wlevm1 = Rd(1)+Rh(1);
 end
-
-%% Debugger
-%disp(strcat('MAIN_FRAME, Before iter:',num2str(size(Ca,2))))
 
 %% Iterations for each time step
 %==========================================================================
@@ -419,8 +357,6 @@ for i=2:NN
         [h_S,delta_S,zeta_S,T_sunrise,T_sunset,L_day(j)] = SetSunVariables(Datam(i,:),DeltaGMT,Lon,Lat,t_bef,t_aft);
         clear h_S delta_S zeta_S T_sunrise T_sunset
         
-
-
         %% BIOGEO_UNIT
         %==============================================================
         %
@@ -477,8 +413,6 @@ for i=2:NN
         % 2) Low vegetation
         %==================================================================
         for cc=1:length(Ccrown)           
-            
-
 
             %% High vegetation for Crown areas  
             %==============================================================
