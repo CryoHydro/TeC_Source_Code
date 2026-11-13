@@ -237,8 +237,8 @@ OM.dir.status = [save_dir 'run_status.txt'];
 
 % Variables not saved in the checkpoints: forcing (re-loaded each month),
 % run settings and paths (re-read by the launcher at restart)
-OM.ckpt_exclude = {'Ta_S','Pr_S','N_S','Tdew_S','SAB1_S','SAB2_S','PARB_S','Pr_ratio','Pre_S','U_S', ...
-    'Ws_S','SAD1_S','SAD2_S','PARD_S','esat_S','ea_S','Ds_S','Forc_S','Forc_S_dc','Forc_S_dc_r', ...
+OM.ckpt_exclude = {'Ta_Sm','Pr_Sm','N_Sm','Tdew_Sm','SAB1_Sm','SAB2_Sm','PARB_Sm','Pr_ratio','Pre_Sm','U_Sm', ...
+    'Ws_Sm','SAD1_Sm','SAD2_Sm','PARD_Sm','esat_Sm','ea_Sm','Ds_Sm','Forc_S','Forc_S_dc','Forc_S_dc_r', ...
     'idcli_r','idTa','idapply','Meteo_data','Ta','U','Ws','Pr','SWin','SWout','Nin','LWout','Uf', ...
     'esat','ea','Ds','Tdew','SD','SB','SAD1','SAD2','SAB1','SAB2','PARB','PARD','dsERA','dsGRID', ...
     'dsCoeff','demCurv','hm_Ta_lapse','Pr_lapse','Forcing_Date','Forcing_Date_num','year_loaded', ...
@@ -881,18 +881,18 @@ cat = {
  'In_H','mm','Intercepted water, high vegetation'
  'Pr_liq','mm/h','Liquid precipitation'
  'Pr_sno','mm/h','Solid precipitation'
- 'Pr_St','mm/h','Precipitation (forcing)'
- 'Ta_St','degC','Air temperature (forcing)'
- 'Tdew_St','degC','Dew point temperature (forcing)'
- 'Ws_St','m/s','Wind speed (forcing)'
- 'U_St','-','Relative humidity, fraction (forcing)'
- 'N_St','W/m2','Incoming longwave radiation (forcing)'
- 'ea_St','Pa','Vapour pressure (forcing)'
- 'Pre_St','hPa','Atmospheric pressure (forcing)'
- 'SAD1_St','W/m2','Diffuse shortwave radiation, band 1 (forcing)'
- 'SAD2_St','W/m2','Diffuse shortwave radiation, band 2 (forcing)'
- 'SAB1_St','W/m2','Direct shortwave radiation, band 1 (forcing)'
- 'SAB2_St','W/m2','Direct shortwave radiation, band 2 (forcing)'
+ 'Pr_S','mm/h','Precipitation (forcing)'
+ 'Ta_S','degC','Air temperature (forcing)'
+ 'Tdew_S','degC','Dew point temperature (forcing)'
+ 'Ws_S','m/s','Wind speed (forcing)'
+ 'U_S','-','Relative humidity, fraction (forcing)'
+ 'N_S','W/m2','Incoming longwave radiation (forcing)'
+ 'ea_S','Pa','Vapour pressure (forcing)'
+ 'Pre_S','hPa','Atmospheric pressure (forcing)'
+ 'SAD1_S','W/m2','Diffuse shortwave radiation, band 1 (forcing)'
+ 'SAD2_S','W/m2','Diffuse shortwave radiation, band 2 (forcing)'
+ 'SAB1_S','W/m2','Direct shortwave radiation, band 1 (forcing)'
+ 'SAB2_S','W/m2','Direct shortwave radiation, band 2 (forcing)'
  'Ts','degC','Surface temperature (energy balance)'
  'Rn','W/m2','Net radiation'
  'QE','W/m2','Latent heat flux'

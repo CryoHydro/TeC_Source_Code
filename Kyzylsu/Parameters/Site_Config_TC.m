@@ -24,7 +24,7 @@ CONFIG_vals.Restart_Date = [];               % Date of the checkpoint to restart
 CONFIG_vals.Restart_Run  = 'Kyzylsu_Q_fixed'; % Name of run to restart from
 
 %% Model options
-CONFIG_vals.OPT_Forcing   = 4; % Type of forcing: 1 = from AWS which is distributed, 2 = fully gridded, 3 = on-the-fly downscaling,
+CONFIG_vals.OPT_Forcing   = 1; % Type of forcing: 1 = from AWS which is distributed, 2 = fully gridded, 3 = on-the-fly downscaling,
                                % 4 = user forcing function (maps built at each time step)
 CONFIG_vals.OPT_Veg_Param = 1; % Vegetation parameters (Ccrown, Cwat, Crock, Curb, Cbare):
                                % 1 = one value per landcover type (change the values in VPAR_T directly),
