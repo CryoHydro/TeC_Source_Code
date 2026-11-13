@@ -22,7 +22,7 @@ clc; clear;
 site_num_list = [1 2 3 4]; %Please number sequentially
 site_name_list = {'Shallap' 'Torre_Orsina' 'Hybas_Lvl7_Catchment_2070497830','Kyzylsu'};
 num_sites = size(site_num_list,2);
-site_num = 4; %Choose site to run, this then selects the correct site directories
+site_num = 1; %Choose site to run, this then selects the correct site directories
 site_name = site_name_list{site_num};
 
 %===================================================
@@ -86,17 +86,16 @@ Directories.Optpar = [site_name '/Parameters/Options_and_NoVegParams.xlsx'];
 Directories.VPAR = [site_name,'/Parameters/VPAR_T.xlsx'];
 
 % Preprocessing information
-Directories.PreProc = [site_name '/Preprocessing/OUTPUTS/' CONFIG_vals.PreProc_folder '/']; % TOM'S FORMAT IS Directories.PreProc = [site_name '/Grids/']; 
+Directories.PreProc = [site_name '/Grids/']; % %Previously  [site_name '/Preprocessing/OUTPUTS/' CONFIG_vals.PreProc_folder '/']
 dtm_file = CONFIG_vals.dtm_file;
 
 % Sub-path points of interest for discharge and multipoints
 Directories.POIs = [Directories.PreProc 'POI_' erase(dtm_file,'.mat') '.txt']; % POI_dtm_<Site>_<res>m.txt from the preprocessing (next to the dtm)
-Directories.Multi = [site_name '/Multipoint/OUTPUTS/' site_name '_MultiPoints.txt'];   % TOM'S FOLDER FORMAT WITHOUT 'OUTPUTS' SUB DIRECTORY
+Directories.Multi = [site_name '/Multipoint/' site_name '_MultiPoints.txt'];   %
 
 % Dependencies
 addpath(genpath('Functions')); % Where are distributed model set-up files (needed ? yes to load dtm)
-addpath(genpath([site_name '/Preprocessing/OUTPUTS'])); % Where are distributed model set-up files (needed ? yes to load dtm)
-%addpath(genpath([Directories.model,'/T_and_C/TC_setups/' site_name '/RUNS/INPUTS'])); % Where is located the meteorological forcing and Shading matrix 
+addpath(genpath([site_name '/Grids'])); % Where are distributed model set-up files (needed ? yes to load dtm)
 addpath(genpath([site_name '/Forcing'])); % Add path to Ca_Data
 addpath(genpath('T&C_Code')); %T&C source code 
 
