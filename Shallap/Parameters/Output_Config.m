@@ -99,7 +99,15 @@ OUT_var = {
   'Tdp_L'           'day'       'mean'    'hour'        ''          ''
   'Tdp_H'           'day'       'mean'    'hour'        ''          ''
  % --- Runoff and interception ----------------------------------------------
-  'QpointC'         'day'       'mean'    ''            ''          ''   % outlets: written as time series, not maps
+  % Routing outputs (QpointC, QpointH, UpointC, UpointH), computed at the outlet and the points:
+  % Point period -> columns of the point files (Points/), Map period -> time series (Series/).
+  % Catchment values (Q_exit, Qsub_exit): time series (Series/), period from the Map or Point columns.
+  'QpointC'         'day'       'mean'    'hour'        ''          ''   % discharge at the outlet + points (daily series + hourly points)
+  'QpointH'         ''          ''        'hour'        ''          ''   % hillslope outflow at the outlet + points
+  'UpointC'         ''          ''        'hour'        ''          ''   % channel flow velocity at the outlet + points
+  'Q_exit'          ''          ''        'hour'        ''          ''   % surface water leaving the domain
+  'Qsub_exit'       ''          ''        'hour'        ''          ''   % subsurface water leaving the domain
+  'Q_channel'       ''          ''        'hour'        ''          ''   % channel water at the points (stream gauges): water level
   'q_runon'         'day'       'sum'     ''            ''          ''
   'Rd'              'day'       'sum'     ''            ''          ''
   'Rh'              'day'       'sum'     'hour'        ''          ''
@@ -111,18 +119,18 @@ OUT_var = {
  % --- Meteorology (forcing) -------------------------------------------------
   'Pr_liq'          'day'       'sum'     'hour'        ''          ''
   'Pr_sno'          'day'       'sum'     'hour'        ''          ''
-  'Pr_St'           'day'       'sum'     'hour'        ''          ''
-  'Ta_St'           'day'       'mean'    'hour'        ''          ''
-  'Tdew_St'         'day'       'mean'    'hour'        ''          ''
-  'Ws_St'           'day'       'mean'    'hour'        ''          ''
-  'U_St'            'day'       'mean'    'hour'        ''          ''
-  'N_St'            'day'       'mean'    'hour'        ''          ''
-  'ea_St'           'day'       'mean'    'hour'        ''          ''
-  'Pre_St'          'day'       'mean'    'hour'        ''          ''
-  'SAD1_St'         'day'       'mean'    'hour'        ''          ''
-  'SAD2_St'         'day'       'mean'    'hour'        ''          ''
-  'SAB1_St'         'day'       'mean'    'hour'        ''          ''
-  'SAB2_St'         'day'       'mean'    'hour'        ''          ''
+  'Pr_S'            'day'       'sum'     'hour'        ''          ''
+  'Ta_S'            'day'       'mean'    'hour'        ''          ''
+  'Tdew_S'          'day'       'mean'    'hour'        ''          ''
+  'Ws_S'            'day'       'mean'    'hour'        ''          ''
+  'U_S'             'day'       'mean'    'hour'        ''          ''
+  'N_S'             'day'       'mean'    'hour'        ''          ''
+  'ea_S'            'day'       'mean'    'hour'        ''          ''
+  'Pre_S'           'day'       'mean'    'hour'        ''          ''
+  'SAD1_S'          'day'       'mean'    'hour'        ''          ''
+  'SAD2_S'          'day'       'mean'    'hour'        ''          ''
+  'SAB1_S'          'day'       'mean'    'hour'        ''          ''
+  'SAB2_S'          'day'       'mean'    'hour'        ''          ''
  % --- Energy balance --------------------------------------------------------
   'Ts'              'day'       'mean'    'hour'        ''          ''
   'Rn'              'day'       'mean'    'hour'        ''          ''
