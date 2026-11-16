@@ -241,12 +241,17 @@ if CONFIG_vals.OPT_Forcing == 1
     
     %Air temperature, degrees C
     Ta = Meteo_P.Ta + (Meteo_P.Ta_Lapse.*(Zbas-Meteo_Params.St_el)); %Lapse rates should be negative
+    %Dew point temperature, degrees C
+    Tdew = Meteo_P.Tdew + (Meteo_P.Tdew_Lapse.*(Zbas-Meteo_Params.St_el)); %Lapse rates should be negative
     %Apply Tmod
     if DEB==0 && Glh>0 %On clean ice
         %Remove bias for all time first 
         Ta = Ta - Meteo_Params.TmodB;
         idapply = Ta>0; %Apply multiplier when >0
         Ta(idapply) = Ta(idapply).* Meteo_Params.TmodM; %Apply Tmod multiplier
+        %Also apply to Tdew
+        Tdew = Tdew - Meteo_Params.TmodB;
+        Tdew(idapply) = Tdew(idapply).* Meteo_Params.TmodM; %Apply Tmod multiplier
     end
     %Precipitation, mm - This uses the WRF ratio v el relationships
     %First find the ratio for each month related to the elevation of the cell
@@ -258,8 +263,6 @@ if CONFIG_vals.OPT_Forcing == 1
     Pr = Pr_ratio.*Meteo_P.Pr; %Apply ratio
     %Longwave radiation, W m-2
     N = Meteo_P.N + (Meteo_Params.Ldown_lapse.*(Zbas-Meteo_Params.St_el)); %IN LW decreases with elevation
-    %Dew point temperature, degrees C
-    Tdew = Meteo_P.Tdew + (Meteo_P.Tdew_Lapse.*(Zbas-Meteo_Params.St_el)); %Lapse rates should be negative
     %Direct radiation with elevation
     %SAB1 
     id0B1 = Meteo_P.SAB1==0; 
@@ -468,6 +471,25 @@ end
 %==========================================================================
 %PARAM_IC = strcat(Directories.model,'/TC_setups/Shallap/Shallap_MOD_PARAM_Multipoint.m');
 
+% ---- Vegetation parameters of each class, built once (used by PARAMETERS_SOIL_DEV) ----
+% TT_vals{iv} holds the TT_par values of the vegetation types of class VPAR.Class(iv),
+% one struct field per parameter (same result as the old per-cell code in PARAMETERS_SOIL_DEV)
+TT_vals = cell(numel(VPAR.Class),1);
+for iv = 1:numel(VPAR.Class)
+    try
+        [tv_tf,tv_loc] = ismember(TT_par.Properties.VariableNames,VPAR.Veg_type{iv});
+        [~,tv_p] = sort(tv_loc(tv_tf)); % keep the order of the veg names
+        tv_idx = find(tv_tf);
+        tv_T = rows2vars(TT_par(:,tv_idx(tv_p)));
+        tv_T = tv_T(:,2:end); % remove the Veg name column
+        tv_T.Properties.VariableNames = TT_par{:,TT_par.Properties.VariableNames == "Parameters"};
+        TT_vals{iv} = table2struct(tv_T,ToScalar=true);
+    catch tv_ME
+        warning('No vegetation parameters for class %d (%s): %s', VPAR.Class(iv), strjoin(VPAR.Veg_type{iv},', '), tv_ME.message);
+    end
+end
+clear iv tv_tf tv_loc tv_p tv_idx tv_T tv_ME
+
 [aR,             EvL_Zs,       Inf_Zs,     Bio_Zs,      Zinf, ...
  RfH_Zs,         RfL_Zs,         dz,           Ks_Zs,      Dz,          ms, ...
  Kbot,           Krock,          zatm,         Color_Class,  OM_H,       OM_L,        PFT_opt_H, ...
@@ -479,7 +501,7 @@ end
  Kct,            ExEM,           ParEx_H,      Mpar_H,     ParEx_L,     Mpar_L] = ....
                         PARAMETERS_SOIL_DEV( ...
  veg_code,        Psan,       Pcla,     Porg,   DEB,  md_max,...
- afirn,      soil_th,    VPAR,        TT_par,       OPT_PARAM_vals, Zs, ms_max);
+ afirn,      soil_th,    VPAR,        TT_vals,       OPT_PARAM_vals, Zs, ms_max);
 
 %These variables were in MOD_PARAM_Multipoint, now given here 
 Asur=(1./cos(atan(Slo_top))); %% Effective Area / Projected Area
