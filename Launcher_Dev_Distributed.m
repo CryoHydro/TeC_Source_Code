@@ -6,41 +6,40 @@
 %==========================================================================
 % Section                                           Lines
 %--------------------------------------------------------------------------
-%  1. SITE SETUP                                    61-68       choice of the site (site_num)
-%  2. CONFIGURATION                                 69-94       Site_Config file (or TC_CONFIG variable)
-%      2.1   Model structure choices                86-94       OPT_Forcing, OPT_Veg_Param, OPT_Decouple
-%  3. DIRECTORIES                                   95-162      relative paths, run dates, restart
-%  4. OUTPUT FOLDERS                                163-178
-%  5. SPATIAL DATA                                  179-229     grids (dtm_file) and points of interest
-%  6. MODEL PARAMETERS                              230-652
-%      6.1   General options                        232-257     Options_and_NoVegParams.xlsx
-%      6.2   Vegetation parameters                  258-416     VPAR_T.xlsx, Parameters_TC.xlsx
-%      6.3   Glacier and snow parameters            417-501
-%      6.4   Carbon                                 502-515     CO2 series
-%      6.5   Topography and channel parameters      516-581     slope, aspect, flow directions, sky view
-%      6.6   Soil parameters                        582-652
-%  7. INITIAL CONDITIONS                            653-667
-%  8. PARALLEL WORKERS                              668-686     personal computer only
-%  9. DISPLAY OF THE RUN SETTINGS                   687-695
-% 10. METEOROLOGICAL FORCING: SET-UP                696-862     per OPT_Forcing, before the time loop
-%      10.1  Solar variables (just for Lmax_day)    853-862
-% 11. TIME LOOP                                     863-1844
-%      11.1  Distributed forcing                    884-1198    maps of a whole month, once per month
-%      11.2  Forcing of the time step               1199-1237
-%      11.3  Radiation part B                       1238-1251   sun position, terrain correction
-%      11.4  Carbon and other grids                 1252-1261
-%      11.5  Spatial initialization                 1262-1288   vector predefining
-%      11.6  Loop over cells (parfor)               1289-1497   soil biogeochemistry, vegetation, hydrology
-%      11.7  After the loop over cells              1498-1512   sublimation, cell vectors back to grids
-%      11.8  Routing module                         1513-1542
-%      11.9  Glacier volume redistribution          1543-1622   ice dynamics (IGM)
-%      11.10 Avalanches                             1623-1640
-%      11.11 Catchment average snowline             1641-1647
-%      11.12 Fractured rock                         1648-1665
-%      11.13 Albedo map                             1666-1678
-%      11.14 Initial conditions for the next step   1679-1833
-%      11.15 Outputs and checkpoints                1834-1844   Output_Manager
-% 12. COMPUTATIONAL TIME                            1845-1851
+%  1. SITE SETUP                                    60-67       choice of the site (site_num)
+%  2. CONFIGURATION                                 68-93       Site_Config file (or TC_CONFIG variable)
+%      2.1   Model structure choices                85-93       OPT_Forcing, OPT_Veg_Param, OPT_Decouple
+%  3. DIRECTORIES                                   94-161      relative paths, run dates, restart
+%  4. OUTPUT FOLDERS                                162-177
+%  5. SPATIAL DATA                                  178-228     grids (dtm_file) and points of interest
+%  6. MODEL PARAMETERS                              229-651
+%      6.1   General options                        231-256     Options_and_NoVegParams.xlsx
+%      6.2   Vegetation parameters                  257-415     VPAR_T.xlsx, Parameters_TC.xlsx
+%      6.3   Glacier and snow parameters            416-500
+%      6.4   Carbon                                 501-514     CO2 series
+%      6.5   Topography and channel parameters      515-580     slope, aspect, flow directions, sky view
+%      6.6   Soil parameters                        581-651
+%  7. INITIAL CONDITIONS                            652-666
+%  8. PARALLEL WORKERS                              667-685     personal computer only
+%  9. DISPLAY OF THE RUN SETTINGS                   686-694
+% 10. METEOROLOGICAL FORCING: SET-UP                695-861     per OPT_Forcing, before the time loop
+%      10.1  Solar variables (just for Lmax_day)    852-861
+% 11. TIME LOOP                                     862-1763
+%      11.1  Distributed forcing                    883-1197    maps of a whole month, once per month
+%      11.2  Forcing of the time step               1198-1236
+%      11.3  Radiation part B                       1237-1250   sun position, terrain correction
+%      11.4  Carbon and other grids                 1251-1260
+%      11.5  Spatial initialization                 1261-1287   vector predefining
+%      11.6  Loop over cells (parfor)               1288-1496   soil biogeochemistry, vegetation, hydrology
+%      11.7  After the loop over cells              1497-1511   sublimation, cell vectors back to grids
+%      11.8  Routing module                         1512-1541
+%      11.9  Avalanches                             1542-1559
+%      11.10 Catchment average snowline             1560-1566
+%      11.11 Fractured rock                         1567-1584
+%      11.12 Albedo map                             1585-1597
+%      11.13 Initial conditions for the next step   1598-1752
+%      11.14 Outputs and checkpoints                1753-1763   Output_Manager
+% 12. COMPUTATIONAL TIME                            1764-1770
 % (line numbers of this version: they shift when lines are added or removed)
 %==========================================================================
 
@@ -429,7 +428,10 @@ copyfile(Directories.config,[Directories.save 'Parameters/' 'Site_Config_TC.m'])
 % end
 
 % Glacier dynamics and avalanching
-OPT_Idyn = OPT_PARAM_vals.OPT_Idyn; % Switch for glacier dynamics
+OPT_Idyn = OPT_PARAM_vals.OPT_Idyn; % Switch for glacier dynamics: only 0 (off) is available
+if OPT_Idyn > 0
+    error('Ice dynamics (OPT_Idyn = %g in Options_and_NoVegParams.xlsx) is not available in this launcher: set OPT_Idyn = 0', OPT_Idyn)
+end
 OPT_Aval = OPT_PARAM_vals.OPT_Aval; % 1 to turn on avalanching, 0 to turn off avalanching
 a_aval = OPT_PARAM_vals.a_aval; % avalanche parameters a (Bernhart & Schulz 2010) - from TOPKAPI 0.17245 - 0.12/145 from Jouberton et al.(2025) - 99.05/0.1012 from Buri et al. (2023)
 C_aval = OPT_PARAM_vals.C_aval; % avalanche parameters C
@@ -462,9 +464,6 @@ DEB_MAPn = reshape(DEB_MAP,num_cell,1);
 % PATCH, check pre-processing!
 GLA_ID(MASK==0) = NaN;
 GLA_ID(GLH==0) = NaN;
-
-% Compute bedrock DEM for ice flow
-DTM_Bedrock = DTM_orig-GLH;
 
 % Firn albedo - Albedo vs Elevation
 % OPT_Alb_v_el = OPT_PARAM_vals.OPT_Alb_v_el; %Switch for using firn albedo versus elevation
@@ -1540,87 +1539,7 @@ for t = t_start:N_time_step
         break
     end
 
-    %% 11.9 Glacier volume redistribution
-    %----------------------------------------------------------------------
-    if (Datam_S(2)==1) && (Datam_S(3)==1) && (Datam_S(4)==1) && (OPT_Idyn > 0)
-
-        GLA = (GLH > 0) & (MASK == 1); % Glacier mask
-
-        % sum up total water equivalent in [m w.e.], store ratios
-        WEbef = ICE + SWE; % total w.e. before redistribution
-        WEym1 = ICEym1 + SWEym1; % total w.e. from the year before
-
-        raICE = ICE./WEbef; raICE(isnan(raICE)) = 0; % ice ratio of total
-        raSWE = SWE./WEbef; raSWE(isnan(raSWE)) = 0; % snow ratio of total mm w.e.
-
-        THbef = reshape(WEbef,m_cell,n_cell)./916; % conversion to thickness in m, rhi parameter needed, and reshape
-        THym1 = reshape(WEym1,m_cell,n_cell)./916; % conversion to thickness in m, rhi parameter needed, and reshape
-
-        THbef(GLA ~= 1) = 0;
-        THym1(GLA ~= 1) = 0;
-
-        SMB = (WEbef - WEym1)./916; % Distributed surface mass balance of the previous year in m/y ice-eq (IGM)
-        SMB(GLH == 0 | MASK~=1 | GLA ~= 1) = -10;
-        SMB(isnan(SMB)) = -10;
-        SMB = reshape(SMB,m_cell,n_cell);
-
-        %%%% Create or update the .nc file %%%%%%%%%%%%
-
-        x(2) = x(1) + (y(2)-y(1)); % Temporary fix
-        IGM_netcdf([outlocation 'igm_inputs3.nc'],x,y,rot90(flipud(double(GLA)),3),rot90(flipud(THym1),3),rot90(flipud(DTM_Bedrock),3) ...
-            , rot90(flipud(DTM_orig),3),rot90(flipud(SMB),3)) % Create .nc file
-
-        %%%% Run IGM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-        pyenv('Version',path_igmEnv, 'ExecutionMode','OutOfProcess'); % setup python virtual env
-        igm_run_path = [path_igm '/igm/igm_run.py']; % path of IGM .py script
-        addpath(genpath([path_igm '/igm/']))
-
-        igm_arg = [' --lncd_input_file ' [outlocation 'igm_inputs3.nc'] ...
-            ' --working_dir ' outlocation ...
-            ' --time_start ' num2str(1) ...
-            ' --time_end ' num2str(2) ...
-            ' --time_save ' num2str(1)];
-
-        pyrunfile([igm_run_path igm_arg]) % Run IGM
-
-        thk = ncread([outlocation 'output.nc'],'thk'); % Load updated glacier thickness from IGM
-
-        THnew = double(rot90(thk(:,:,2))); % New thickness after IGM
-
-        % Check IGM mass conservation
-        dMB_igm = nansum(THnew,'all') - nansum(THbef,'all');
-
-        % Add the icethickness which leaks outside of glacier mask back on existing glacier
-        IGM_smb = nansum(THnew,'all') - nansum(THym1,'all');
-        TC_smb = nansum(SMB(GLA>0),'all');
-
-        THnew(flipud(GLA == 1) & THnew > 0) = THnew(flipud(GLA == 1) & THnew > 0) + (TC_smb-IGM_smb)./nansum(GLA>0,'all');
-        THnew(flipud(GLA ~= 1)) = 0; % No glacier growing in area
-
-        % reshape total water equivalent back to array map
-        WEnew = reshape(flipud(THnew),num_cell,1).*916; % conversion back to mm w.e., rhi parameter needed, and reshape
-
-        % recalculate snow/ice w.e. maps based on old ratios
-        ICE = raICE.*WEnew; % re-calculate ice w.e.
-        SWE(WEnew>0) = raSWE(WEnew>0).*WEnew(WEnew>0); % re-calculate SWE, only where glacier
-
-        % Mass balance check
-        dMass = nansum(ICE(WEnew >0) + SWE(WEnew >0)) - nansum(WEbef(WEnew >0));
-
-        disp(['Total SMB: ' num2str(TC_smb)])
-        disp(['SMB after IGM redistribution: ' num2str(dMass/916)])
-
-        % store for next year redistribution
-        ICEym1 = ICE;
-        SWEym1 = SWE;
-
-        % calculate new snow/ice depths
-        ICE_D = ICE/916; ICE_D(isnan(ICE_D)) = 0;
-        SND = SWE./ros; SND(isnan(SND)) = 0;
-    end
-
-    %% 11.10 Avalanches
+    %% 11.9 Avalanches
     %----------------------------------------------------------------------
     SND = reshape(SND,m_cell,n_cell); SND(isnan(SND)) = 0;
     SWE = reshape(SWE,m_cell,n_cell); SWE(isnan(SWE)) = 0;
@@ -1638,14 +1557,14 @@ for t = t_start:N_time_step
         Swe_exit = SWE.*0;
     end
 
-    %% 11.11 Catchment average snowline
+    %% 11.10 Catchment average snowline
     %----------------------------------------------------------------------
     SND = reshape(SND,num_cell,1); SND(isnan(SND)) = 0;
     SWE = reshape(SWE,num_cell,1); SWE(isnan(SWE)) = 0;
     ros = reshape(ros,num_cell,1); ros(isnan(ros)) = 0;
     SWE_avalanched = reshape(SWE_avalanched,num_cell,1);
 
-    %% 11.12 Fractured rock
+    %% 11.11 Fractured rock
     %----------------------------------------------------------------------
     [Q_channel,FROCK,Qflow_rock] = FRACTURED_ROCK(Q_channel,FROCK, ...
         SPRINGn,dth,m_cell,n_cell,num_cell,Kres_Rock);
@@ -1663,7 +1582,7 @@ for t = t_start:N_time_step
         FROCK_tgtm1 = sum(FROCKtm1)*(cellsize^2)/Area; %%
     end
 
-    %% 11.13 Albedo map
+    %% 11.12 Albedo map
     %----------------------------------------------------------------------
     % if t==2
     %     snow_albedo_out = snow_albedotm1;
@@ -1676,7 +1595,7 @@ for t = t_start:N_time_step
     % surface_albedo_out(SND>0)=snow_albedo(SND>0);
     % end
 
-    %% 11.14 Initial conditions for the next step
+    %% 11.13 Initial conditions for the next step
     %----------------------------------------------------------------------
     Cicewtm1 = Cicew;
     Citm1_shdH = Ci_shdH;
@@ -1831,7 +1750,7 @@ for t = t_start:N_time_step
         V_t(:,:,t) = V;
     end
 
-    %% 11.15 Outputs and checkpoints
+    %% 11.14 Outputs and checkpoints
     %----------------------------------------------------------------------
     % Aggregation and writing of the outputs chosen in
     % <site>/Parameters/Output_Config.m, restart checkpoints (T&C_Code/Output_Manager.m)
