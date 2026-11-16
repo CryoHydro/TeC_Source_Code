@@ -97,7 +97,8 @@ Directories.Multi = [site_name '/Multipoint/' site_name '_MultiPoints.txt'];   %
 addpath(genpath('Functions')); % Where are distributed model set-up files (needed ? yes to load dtm)
 addpath(genpath([site_name '/Grids'])); % Where are distributed model set-up files (needed ? yes to load dtm)
 addpath(genpath([site_name '/Forcing'])); % Add path to Ca_Data
-addpath(genpath('T&C_Code')); %T&C source code 
+addpath(genpath('T&C_Code')); %T&C source code
+addpath('Forcing'); % Forcing steps common to all forcing options (forcing_*.m)
 
 % Modelling period and time
 %--------------------------------------------------------------------------
@@ -1158,52 +1159,16 @@ for t=t_start:N_time_step
         clear F val v forc_list
     end
 
-    %========= Further forcing steps for all types ==========
+    %========= Further forcing steps for all types (functions in Forcing/) ==========
+    % Glacier cooling effect on Ta and Tdew, and U recomputed - Shaw et al. (2025)
     if OPT_Decouple == 1
-
-    % Glacier Cooling Effect - Shaw et al. (2025)
-    load('ModelCoefficients_Decoupling.mat'); % Should be in 'Functions' path that is already generated
-    
-    SpecHum = convert_humidity(Pre_Sm*100,Ta_Sm+273.15,U_Sm*100,'relative humidity','specific humidity');
-    
-    D = DTM(:)'; F = FPL(:)'; % NEED TO CHANGE ORIENTATION OF GRIDS?
-
-    for tt = 1:size(Ta_Sm,1)
-        
-        Swin = SAD1_Sm + SAB1_Sm + SAD2_Sm + SAB2_Sm;
-        if min(Swin(tt,:),[],'all') > 30 % day time only (without very overcast conditions)
-        
-        T = Ta_Sm(tt,:); S = SpecHum(tt,:); FF = Ws_Sm(tt,:); Td = Tdew_Sm(tt,:);
-        K = predict(DECOUPLE_COEFF,[T',S',FF',F',D'])'; % Add into prediction as vector (nx1)
-        K(K<0.2) = 0.2; K(K>1) = 1; %limits of the observations
-
-        ValidCooling = ~isnan(F) & ~isnan(D) & T > 0;
-
-        Td(ValidCooling) = Td(ValidCooling) .* K(ValidCooling);      
-        T(ValidCooling) = T(ValidCooling) .* K(ValidCooling);
-                  
-        Ta_Sm(tt,:) = T;
-        Tdew_Sm(tt,:) = Td;
-
-        end
+        [Ta_Sm, Tdew_Sm, U_Sm] = forcing_glacier_cooling(Ta_Sm, Tdew_Sm, U_Sm, Pre_Sm, Ws_Sm, ...
+            SAD1_Sm + SAB1_Sm + SAD2_Sm + SAB2_Sm, DTM, FPL);
     end
 
-    % Reconvert to relative humidity (and fraction)
-    U_Sm = exp((237.3*17.227.*(Tdew_Sm - Ta_Sm))./((237.3+Ta_Sm).*(237.3+Tdew_Sm))); 
-    U_Sm(U_Sm>1) = 1; %Cannot be more than 100%
-
-    end
-
-
-    % Vapor pressure - calculate based on distributed Ta and U
-    % esat/ea/Ds/Tdew grids of month of time x cell
-    a=17.27; b=237.3;
-    esat_Sm=611.*exp(a.*Ta_Sm./(b+Ta_Sm)); %Vapour pressure at saturation (Pa)
-    ea_Sm=U_Sm.*esat_Sm;                 %Vapour pressure (Pa)
-    Ds_Sm= esat_Sm - ea_Sm;              %Vapor Pressure Deficit (Pa)
-    Ds_Sm(Ds_Sm<0)=0; 
-    %Don't recalculate Tdew - its above
+    % Vapour pressure from the distributed Ta and U (time x cell); Tdew is not recalculated
     %NOTE SHOULD WE ADJUST DEW POINT WITH LOWER AIR TEMP FROM TMOD?
+    [esat_Sm, ea_Sm, Ds_Sm] = forcing_vapour_pressure(Ta_Sm, U_Sm);
     clear a b xr;
 
     %---- Check variables -----
@@ -1261,48 +1226,14 @@ for t=t_start:N_time_step
     %Run per timestep now
     [jDay]= JULIAN_DAY(Datam_S);
     [h_S,delta_S,zeta_S,T_sunrise,T_sunset,L_day]= SetSunVariables(Datam_S,IniCond.DeltaGMT,Lon,Lat,t_bef,t_aft); %These are one value per time step
-    [ShF] = Shadow_Effect(DTM,h_S,zeta_S,HZ,Zasp); %ShF is x,y grid
+    SvFn = reshape(SvF,num_cell,1)'; % sky view factor as a row (also used by the hydrological module)
 
-    %needed, if terrain effects have not been considered during pre-processing
-    cos_fst = cos(atan(Slo_top))*sin(h_S) + sin(atan(Slo_top)).*cos(h_S).*cos(zeta_S-Aspect*pi/180);
-    cos_fst(cos_fst<0)=0; %cos_fst is x,y grid   
-    
-    %Reshape radiation grids for calculations
-    %Note shifting to rows to match radiation inputs
-    SvFn = reshape(SvF,num_cell,1)';
-    Ctn = reshape(Ct,num_cell,1)';
-    ShFn = reshape(ShF,num_cell,1)';
-    cos_fstn = reshape(cos_fst,num_cell,1)';
-
-    %rho_g and h_S are scalars
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    SAD1_S = SAD1_S.*SvFn + Ctn.*rho_g.*(SAD1_S./sin(h_S).*cos_fstn + (1-SvFn).*SAD1_S);
-    SAD2_S = SAD2_S.*SvFn + Ctn.*rho_g.*(SAD2_S./sin(h_S).*cos_fstn + (1-SvFn).*SAD2_S);
-    PARD_S = PARD_S.*SvFn + Ctn.*rho_g.*(PARD_S./sin(h_S).*cos_fstn + (1-SvFn).*PARD_S);
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    SAB1_S =(SAB1_S./sin(h_S)).*cos_fstn.*ShFn;
-    SAB2_S =(SAB2_S./sin(h_S)).*cos_fstn.*ShFn;
-    PARB_S = (PARB_S./sin(h_S)).*cos_fstn.*ShFn;        
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-    SAB1_S(SAB1_S<0)=0;
-    SAB2_S(SAB2_S<0)=0;
-    PARB_S(PARB_S<0)=0;
-    PARD_S(PARD_S<0)=0;
-    SAD1_S(SAD1_S<0)=0;
-    SAD2_S(SAD2_S<0)=0;
-    SAB1_S(isnan(SAB1_S)) = 0;
-    SAB2_S(isnan(SAB2_S)) = 0;
-    SAD1_S(isnan(SAD1_S)) = 0;
-    SAD2_S(isnan(SAD2_S)) = 0;
-    PARB_S(isnan(PARB_S)) = 0;
-    PARD_S(isnan(PARD_S)) = 0;
-
-    % Sun below ~5.7 deg: the slope correction (division by sin(h_S)) is unstable;
-    % set all shortwave to 0, as in the former launcher
-    if sin(h_S) <= 0.10
-        SAB1_S(:) = 0; SAB2_S(:) = 0; SAD1_S(:) = 0; SAD2_S(:) = 0; PARB_S(:) = 0; PARD_S(:) = 0;
-    end
+    % Terrain correction of the shortwave: slope and aspect, cast shadows, sky view and
+    % terrain reflection (needed if terrain effects have not been considered during pre-processing)
+    Rad = struct('SAB1',SAB1_S, 'SAB2',SAB2_S, 'PARB',PARB_S, 'SAD1',SAD1_S, 'SAD2',SAD2_S, 'PARD',PARD_S);
+    Rad = forcing_terrain_radiation(Rad, h_S, zeta_S, DTM, Slo_top, Aspect, SvFn, Ct, HZ, Zasp, rho_g);
+    SAB1_S = Rad.SAB1; SAB2_S = Rad.SAB2; PARB_S = Rad.PARB; SAD1_S = Rad.SAD1; SAD2_S = Rad.SAD2; PARD_S = Rad.PARD;
+    clear Rad
        
     %% Carbon
     Ca_S = Ca(t)*MASKn; %Carbon is already set on the correct time series
