@@ -32,6 +32,9 @@ CONFIG_vals.OPT_Veg_Param = 2; % Vegetation parameters (Ccrown, Cwat, Crock, Cur
                                %     needed for the Veg_type names, but its values are not used)
 CONFIG_vals.OPT_Decouple  = 0; % Glacier cooling effect on air temperature (Shaw et al., 2025):
                                % 1 = on (needs ModelCoefficients_Decoupling.mat and the FPL grid), 0 = off
+CONFIG_vals.OPT_MPType = "POI"; %If using "multipoint' type of Multipoint run (not "point') can choose type of points to run, POI = points of interest, 
+                                %"CLUSTER" = cluster points, "ALL" = all points. These should be give in the
+                                %Multipoints table under TYPE.
 
 %% Meteorological forcing (used if OPT_Forcing = 1)
 CONFIG_vals.Meteo_el        = 4767;                      % Elevation of meteorological station [m a.s.l.]

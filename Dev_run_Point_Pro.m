@@ -244,14 +244,22 @@ if CONFIG_vals.OPT_Forcing == 1
     %Dew point temperature, degrees C
     Tdew = Meteo_P.Tdew + (Meteo_P.Tdew_Lapse.*(Zbas-Meteo_Params.St_el)); %Lapse rates should be negative
     %Apply Tmod
-    if DEB==0 && Glh>0 %On clean ice
-        %Remove bias for all time first 
-        Ta = Ta - Meteo_Params.TmodB;
-        idapply = Ta>0; %Apply multiplier when >0
-        Ta(idapply) = Ta(idapply).* Meteo_Params.TmodM; %Apply Tmod multiplier
-        %Also apply to Tdew
-        Tdew = Tdew - Meteo_Params.TmodB;
-        Tdew(idapply) = Tdew(idapply).* Meteo_Params.TmodM; %Apply Tmod multiplier
+    if OPT_Tmod == 1
+        if DEB==0 && Glh>0 %On clean ice
+           idapply = Ta>0; %Apply when >0
+           Ta(idapply) = Ta(idapply) - Meteo_Params.TmodB; %Only remove bias
+           Tdew(idapply) = Tdew(idapply) - Meteo_Params.TmodB; %Also apply to Tdew
+        end
+    elseif OPT_Tmod == 2
+        if DEB==0 && Glh>0 %On clean ice
+            %Remove bias for all time first 
+            Ta = Ta - Meteo_Params.TmodB;
+            idapply = Ta>0; %Apply multiplier when >0
+            Ta(idapply) = Ta(idapply).* Meteo_Params.TmodM; %Apply Tmod multiplier
+            %Also apply to Tdew
+            Tdew = Tdew - Meteo_Params.TmodB;
+            Tdew(idapply) = Tdew(idapply).* Meteo_Params.TmodM; %Apply Tmod multiplier
+        end
     end
     %Precipitation, mm - This uses the WRF ratio v el relationships
     %First find the ratio for each month related to the elevation of the cell
@@ -352,6 +360,31 @@ elseif CONFIG_vals.OPT_Forcing == 2
     xr=a.*Ta./(b+Ta)+log10(U); %U here should be a fraction
     Tdew=b.*xr./(a-xr);               %Presumed dewpoint temperature (�C)
     clear a b xr;
+
+     %Apply Tmod
+    if OPT_Tmod == 1
+        if DEB==0 && Glh>0 %On clean ice
+           idapply = Ta>0; %Apply when >0
+           Ta(idapply) = Ta(idapply) - Meteo_Params.TmodB; %Only remove bias
+           Tdew(idapply) = Tdew(idapply) - Meteo_Params.TmodB; %Also apply to Tdew
+        end
+    elseif OPT_Tmod == 2
+        if DEB==0 && Glh>0 %On clean ice
+            %Remove bias for all time first 
+            Ta = Ta - Meteo_Params.TmodB;
+            idapply = Ta>0; %Apply multiplier when >0
+            Ta(idapply) = Ta(idapply).* Meteo_Params.TmodM; %Apply Tmod multiplier
+            %Also apply to Tdew
+            Tdew = Tdew - Meteo_Params.TmodB;
+            Tdew(idapply) = Tdew(idapply).* Meteo_Params.TmodM; %Apply Tmod multiplier
+        end
+    end
+
+    %Recalculate U
+    %Use the lapsed dew point temprature to derive relative humidity
+    c=237.3; b=17.27;
+    U = 100*exp((c*b.*(Tdew - Ta))./((c+Ta).*(c+Tdew)));
+    %Check units
 
     %Radiation 
     SWin = Meteo_P.Swin; %Incoming shortwave radiation, Wm-2
