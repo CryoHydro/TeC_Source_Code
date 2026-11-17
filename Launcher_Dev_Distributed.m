@@ -7,25 +7,25 @@
 % Section                                           Lines
 %--------------------------------------------------------------------------
 %  1. SITE SETUP                                    60-67       choice of the site (site_num)
-%  2. CONFIGURATION                                 68-93       Site_Config file (or TC_CONFIG variable)
-%      2.1   Model structure choices                85-93       OPT_Forcing, OPT_Veg_Param, OPT_Decouple
-%  3. DIRECTORIES                                   94-161      relative paths, run dates, restart
-%  4. OUTPUT FOLDERS                                162-177
-%  5. SPATIAL DATA                                  178-228     grids (dtm_file) and points of interest
-%  6. MODEL PARAMETERS                              229-651
-%      6.1   General options                        231-256     Options_and_NoVegParams.xlsx
-%      6.2   Vegetation parameters                  257-415     VPAR_T.xlsx, Parameters_TC.xlsx
-%      6.3   Glacier and snow parameters            416-500
-%      6.4   Carbon                                 501-514     CO2 series
-%      6.5   Topography and channel parameters      515-580     slope, aspect, flow directions, sky view
-%      6.6   Soil parameters                        581-651
-%  7. INITIAL CONDITIONS                            652-666
-%  8. PARALLEL WORKERS                              667-685     personal computer only
-%  9. DISPLAY OF THE RUN SETTINGS                   686-694
-% 10. METEOROLOGICAL FORCING: SET-UP                695-861     per OPT_Forcing, before the time loop
-%      10.1  Solar variables (just for Lmax_day)    852-861
-% 11. TIME LOOP                                     862-1763
-%      11.1  Distributed forcing                    883-1197    maps of a whole month, once per month
+%  2. CONFIGURATION                                 68-94       Site_Config file (or TC_CONFIG variable)
+%      2.1   Model structure choices                85-94       OPT_Forcing, OPT_Veg_Param, OPT_Decouple
+%  3. DIRECTORIES                                   95-162      relative paths, run dates, restart
+%  4. OUTPUT FOLDERS                                163-178
+%  5. SPATIAL DATA                                  179-229     grids (dtm_file) and points of interest
+%  6. MODEL PARAMETERS                              230-650
+%      6.1   General options                        232-257     Options_and_NoVegParams.xlsx
+%      6.2   Vegetation parameters                  258-416     VPAR_T.xlsx, Parameters_TC.xlsx
+%      6.3   Glacier and snow parameters            417-499
+%      6.4   Carbon                                 500-513     CO2 series
+%      6.5   Topography and channel parameters      514-579     slope, aspect, flow directions, sky view
+%      6.6   Soil parameters                        580-650
+%  7. INITIAL CONDITIONS                            651-665
+%  8. PARALLEL WORKERS                              666-684     personal computer only
+%  9. DISPLAY OF THE RUN SETTINGS                   685-693
+% 10. METEOROLOGICAL FORCING: SET-UP                694-860     per OPT_Forcing, before the time loop
+%      10.1  Solar variables (just for Lmax_day)    851-860
+% 11. TIME LOOP                                     861-1763
+%      11.1  Distributed forcing                    882-1197    maps of a whole month, once per month
 %      11.2  Forcing of the time step               1198-1236
 %      11.3  Radiation part B                       1237-1250   sun position, terrain correction
 %      11.4  Carbon and other grids                 1251-1260
@@ -89,7 +89,8 @@ OPT_Veg_Param = CONFIG_vals.OPT_Veg_Param; % Choose if vegetation parameters (fo
 % For 1 change the values in VPAR_T directly, for 2 provide the grids in the
 % dtm_file. Note for 2 you still need the table to read the Veg_type names
 % but the values are not used.
-OPT_Decouple = CONFIG_vals.OPT_Decouple; % Glacier cooling effect on air temperature (Shaw et al., 2025): 1 = on, 0 = off
+OPT_Decouple = CONFIG_vals.OPT_Decouple; % Glacier cooling effect on air temperature: 0 = off, 1 = Shaw et al. (2025),
+% 2 = bias TmodB, 3 = bias TmodB and multiplier TmodM (TmodB, TmodM in Options_and_NoVegParams.xlsx); all over clean ice only
 
 %% 3. DIRECTORIES
 %==========================================================================
@@ -415,17 +416,14 @@ copyfile(Directories.config,[Directories.save 'Parameters/' 'Site_Config_TC.m'])
 
 %% 6.3 Glacier and snow parameters
 %--------------------------------------------------------------------------
-% %Tmod parameters
-% OPT_Tmod = OPT_PARAM_vals.OPT_Tmod;
-% if OPT_Tmod == 0 %No Tmod applied
-%     TmodB = 0;
-% elseif OPT_Tmod == 1 %Simple bias correction
-%     TmodB = OPT_PARAM_vals.TmodB; %Tmod bias (positive reduces temperature over ice)
-% elseif OPT_Tmod == 2 %Uses a relationship with optional bias correction
-%     TmodB = OPT_PARAM_vals.TmodB; %Tmod bias (positive reduces temperature over ice)
-%     TmodM = OPT_PARAM_vals.TmodM; %Tmod multiplier
-%     TmodC = OPT_PARAM_vals.TmodC; %Tmod coefficent
-% end
+% Glacier cooling of the forcing (OPT_Decouple, section 2.1): parameters of methods 2 and 3
+Tmod = struct('clean_ice', [], 'TmodB', 0, 'TmodM', 1);
+if OPT_Decouple == 2 || OPT_Decouple == 3
+    Tmod.TmodB = OPT_PARAM_vals.TmodB; % Tmod bias (positive reduces temperature over ice)
+end
+if OPT_Decouple == 3
+    Tmod.TmodM = OPT_PARAM_vals.TmodM; % Tmod multiplier
+end
 
 % Glacier dynamics and avalanching
 OPT_Idyn = OPT_PARAM_vals.OPT_Idyn; % Switch for glacier dynamics: only 0 (off) is available
@@ -460,6 +458,7 @@ end
 GLH = GLH.*(GLA_MAP2>0); % Prevent ice thickness outside glaciers
 GLHn = reshape(GLH,num_cell,1);
 DEB_MAPn = reshape(DEB_MAP,num_cell,1);
+Tmod.clean_ice = GLHn > 0 & DEB_MAPn == 0; % Clean ice (initial glacier thickness): the glacier cooling (OPT_Decouple) is applied only there
 
 % PATCH, check pre-processing!
 GLA_ID(MASK==0) = NaN;
@@ -1173,10 +1172,11 @@ for t = t_start:N_time_step
         end
 
         %========= Further forcing steps for all types (functions in Forcing/) ==========
-        % Glacier cooling effect on Ta and Tdew, and U recomputed - Shaw et al. (2025)
-        if OPT_Decouple == 1
+        % Glacier cooling effect on Ta and Tdew, and U recomputed: 1 = Shaw et al. (2025),
+        % 2 = bias, 3 = bias and multiplier; all over clean ice only (Tmod.clean_ice)
+        if OPT_Decouple > 0
             [Ta_Sm, Tdew_Sm, U_Sm] = forcing_glacier_cooling(Ta_Sm, Tdew_Sm, U_Sm, Pre_Sm, Ws_Sm, ...
-                SAD1_Sm + SAB1_Sm + SAD2_Sm + SAB2_Sm, DTM, FPL);
+                SAD1_Sm + SAB1_Sm + SAD2_Sm + SAB2_Sm, DTM, FPL, OPT_Decouple, Tmod);
         end
 
         % Vapour pressure from the distributed Ta and U (time x cell); Tdew is not recalculated
