@@ -223,6 +223,21 @@ zatm_hourly_on = 0;
 %----------------------------------------------------------------------
 %Calculate or load forcing for the specific point
 % --------------------------------------------------------------------
+%Cooling params
+OPT_Decouple = CONFIG_vals.OPT_Decouple; % Glacier cooling effect on air temperature: 0 = off, 1 = Shaw et al. (2025),
+% 2 = bias TmodB, 3 = bias TmodB and multiplier TmodM (TmodB, TmodM in Options_and_NoVegParams.xlsx); all over clean ice only
+if OPT_Decouple ==1
+    FPL = mm.FPL;
+    fpl = FPL(ROW,COL); %glacier flow path length (NaN outside glaciers)  
+    Tmod = [];
+elseif OPT_Decouple == 2
+    fpl =[];
+    Tmod.TmodB = OPT_PARAM_vals.TmodB; % Tmod bias (positive reduces temperature over ice)
+elseif OPT_Decouple == 3
+     fpl =[];
+     Tmod.TmodB = OPT_PARAM_vals.TmodB; % Tmod bias (positive reduces temperature over ice)
+     Tmod.TmodM = OPT_PARAM_vals.TmodM; % Tmod multiplier
+end
 
 %Sort lapse rates
 if CONFIG_vals.OPT_Forcing == 1
@@ -243,34 +258,12 @@ if CONFIG_vals.OPT_Forcing == 1
     Ta = Meteo_P.Ta + (Meteo_P.Ta_Lapse.*(Zbas-Meteo_Params.St_el)); %Lapse rates should be negative
     %Dew point temperature, degrees C
     Tdew = Meteo_P.Tdew + (Meteo_P.Tdew_Lapse.*(Zbas-Meteo_Params.St_el)); %Lapse rates should be negative
-    %Apply Tmod
-    if OPT_Tmod == 1
-        if DEB==0 && Glh>0 %On clean ice
-           idapply = Ta>0; %Apply when >0
-           Ta(idapply) = Ta(idapply) - Meteo_Params.TmodB; %Only remove bias
-           Tdew(idapply) = Tdew(idapply) - Meteo_Params.TmodB; %Also apply to Tdew
-        end
-    elseif OPT_Tmod == 2
-        if DEB==0 && Glh>0 %On clean ice
-            %Remove bias for all time first 
-            Ta = Ta - Meteo_Params.TmodB;
-            idapply = Ta>0; %Apply multiplier when >0
-            Ta(idapply) = Ta(idapply).* Meteo_Params.TmodM; %Apply Tmod multiplier
-            %Also apply to Tdew
-            Tdew = Tdew - Meteo_Params.TmodB;
-            Tdew(idapply) = Tdew(idapply).* Meteo_Params.TmodM; %Apply Tmod multiplier
-        end
-    end
-    %Precipitation, mm - This uses the WRF ratio v el relationships
-    %First find the ratio for each month related to the elevation of the cell
-    Pr_ratio = zeros(NN,1);
-    for m=1:12
-        mid = Meteo_P.month==m;
-        Pr_ratio(mid) = (Meteo_Params.Pr_lapse(m).month.p1.*Zbas) + Meteo_Params.Pr_lapse(m).month.p2;  %val(x) = p1*x + p2
-    end
-    Pr = Pr_ratio.*Meteo_P.Pr; %Apply ratio
-    %Longwave radiation, W m-2
-    N = Meteo_P.N + (Meteo_Params.Ldown_lapse.*(Zbas-Meteo_Params.St_el)); %IN LW decreases with elevation
+    %Pre
+    Pre = (101325*((1-(0.0065.*Zbas./288.15)).^(9.18*0.0289644./(8.31447*0.0065))))./100; %/100 converts to mbar
+    Pre = repmat(Pre,NN,1);
+    %Do we apply a wind speed lapse rate?
+    Ws = Meteo_P.Ws;
+
     %Direct radiation with elevation
     %SAB1 
     id0B1 = Meteo_P.SAB1==0; 
@@ -287,25 +280,37 @@ if CONFIG_vals.OPT_Forcing == 1
     PARB = zeros(NN,1);
     PARB(~id0RB)=Meteo_P.PARB(~id0RB) + (Meteo_Params.PARB_lapse.*(Zbas-Meteo_Params.St_el)); %Radiation should increase with elevation
     PARB(PARB<0)=0;
-    %Pre
-    Pre = (101325*((1-(0.0065.*Zbas./288.15)).^(9.18*0.0289644./(8.31447*0.0065))))./100; %/100 converts to mbar
-    Pre = repmat(Pre,NN,1);
-
-    %Do we apply a wind speed lapse rate?
-    Ws = Meteo_P.Ws;
+   
     %Diffuse radiation can be the same everywhere
     SAD1 = Meteo_P.SAD1;
     SAD2 = Meteo_P.SAD2;
     PARD = Meteo_P.PARD;
 
-    %Use the lapsed dew point temprature to derive relative humidity
+    SW = SAD1 + SAB1 + SAD2 + SAB2; %Incoming shortwave on a flat surface,W m-2, for Decoupling methd 1
+
+    %Calculate pre-cooling U
     c=237.3; b=17.27;
-    U = 100*exp((c*b.*(Tdew - Ta))./((c+Ta).*(c+Tdew)));
+    Uin = 100*exp((c*b.*(Tdew - Ta))./((c+Ta).*(c+Tdew))); %This is the relative humidity for the lapsed Ta and Tdew but before cooling
     clear c b 
-    if max(max(U))>=1
-    U = U./100; %Turn into fraction
+    Uin(Uin>1) = 1; %Cannot be more than 100%
+
+    %Run glacier cooling
+    if DEB==0 && Glh>0 && OPT_Decouple>0 %if clean ice and switched on
+    [Ta, Tdew, U] = forcing_glacier_cooling_MP(Ta, Tdew, Uin, Pre, Ws, SW, Zbas, fpl, OPT_Decouple, Tmod);
+    else
+    U = Uin; %So relative humidity unchanged
     end
-    U(U>1) = 1; %Cannot be more than 100%
+    
+    %Precipitation, mm - This uses the WRF ratio v el relationships
+    %First find the ratio for each month related to the elevation of the cell
+    Pr_ratio = zeros(NN,1);
+    for m=1:12
+        mid = Meteo_P.month==m;
+        Pr_ratio(mid) = (Meteo_Params.Pr_lapse(m).month.p1.*Zbas) + Meteo_Params.Pr_lapse(m).month.p2;  %val(x) = p1*x + p2
+    end
+    Pr = Pr_ratio.*Meteo_P.Pr; %Apply ratio
+    %Longwave radiation, W m-2
+    N = Meteo_P.N + (Meteo_Params.Ldown_lapse.*(Zbas-Meteo_Params.St_el)); %IN LW decreases with elevation
 
     % Vapor pressure - calculate based on distributed Ta and U
     a=17.27; b=237.3;
@@ -338,11 +343,11 @@ elseif CONFIG_vals.OPT_Forcing == 2
     Ta = Meteo_P.Ta; %Air temperature, degrees C
     Pr = Meteo_P.Pr; %Precipitation, mm
     Pr(Pr<0.01)=0;
-    U = Meteo_P.RH; %Relative humidity, %
-    if max(max(U))>=1
-        U = U./100; %Turn into fraction
+    Uin = Meteo_P.RH; %Relative humidity, %
+    if max(max(Uin))>=1
+        Uin = Uin./100; %Turn into fraction
     end
-    U(U>1) = 1; %Cannot be more than 100%
+    Uin(Uin>1) = 1; %Cannot be more than 100%
     N = Meteo_P.N; %Longwave radiation, W m-2 
     Ws = Meteo_P.Ws; %Wind speed, ms-1
     Ws(Ws < 0.01) = 0.01;
@@ -350,50 +355,33 @@ elseif CONFIG_vals.OPT_Forcing == 2
     if max(max(Pre))>10000
         Pre = Pre./100; %Convert from Pascals to mbar/hectopascal
     end
-    
-    %Calculate Tdew
-    a=17.27; b=237.3;
-    esat=611.*exp(a.*Ta./(b+Ta)); %Vapour pressure at saturation (Pa)
-    ea=U.*esat;                 %Vapour pressure (Pa) U here should be a fraction
-    Ds= esat - ea;              %Vapor Pressure Deficit (Pa)
-    Ds(Ds<0)=0; 
-    xr=a.*Ta./(b+Ta)+log10(U); %U here should be a fraction
-    Tdew=b.*xr./(a-xr);               %Presumed dewpoint temperature (�C)
-    clear a b xr;
-
-     %Apply Tmod
-    if OPT_Tmod == 1
-        if DEB==0 && Glh>0 %On clean ice
-           idapply = Ta>0; %Apply when >0
-           Ta(idapply) = Ta(idapply) - Meteo_Params.TmodB; %Only remove bias
-           Tdew(idapply) = Tdew(idapply) - Meteo_Params.TmodB; %Also apply to Tdew
-        end
-    elseif OPT_Tmod == 2
-        if DEB==0 && Glh>0 %On clean ice
-            %Remove bias for all time first 
-            Ta = Ta - Meteo_Params.TmodB;
-            idapply = Ta>0; %Apply multiplier when >0
-            Ta(idapply) = Ta(idapply).* Meteo_Params.TmodM; %Apply Tmod multiplier
-            %Also apply to Tdew
-            Tdew = Tdew - Meteo_Params.TmodB;
-            Tdew(idapply) = Tdew(idapply).* Meteo_Params.TmodM; %Apply Tmod multiplier
-        end
-    end
-
-    %Recalculate U
-    %Use the lapsed dew point temprature to derive relative humidity
-    c=237.3; b=17.27;
-    U = 100*exp((c*b.*(Tdew - Ta))./((c+Ta).*(c+Tdew)));
-    %Check units
 
     %Radiation 
-    SWin = Meteo_P.Swin; %Incoming shortwave radiation, Wm-2
     SAD1 = Meteo_P.SAD1;
     SAD2 = Meteo_P.SAD2;
     SAB1 = Meteo_P.SAB1;
     SAB2 = Meteo_P.SAB2;
     PARB = Meteo_P.PARB;
     PARD = Meteo_P.PARD;
+    SWin = Meteo_P.Swin; %Incoming shortwave radiation, Wm-2
+    SW = SAD1 + SAB1 + SAD2 + SAB2; %Incoming shortwave on a flat surface,W m-2, for Decoupling methd 1
+    
+    %Calculate Tdew
+    a=17.27; b=237.3;
+    esat=611.*exp(a.*Ta./(b+Ta)); %Vapour pressure at saturation (Pa)
+    ea=Uin.*esat;                 %Vapour pressure (Pa) U here should be a fraction
+    Ds= esat - ea;              %Vapor Pressure Deficit (Pa)
+    Ds(Ds<0)=0; 
+    xr=a.*Ta./(b+Ta)+log10(Uin); %U here should be a fraction
+    Tdew=b.*xr./(a-xr);               %Presumed dewpoint temperature (�C)
+    clear a b xr;
+
+    %Run glacier cooling and update U
+    if DEB==0 && Glh>0 && OPT_Decouple>0 %if clean ice and switched on
+    [Ta, Tdew, U] = forcing_glacier_cooling_MP(Ta, Tdew, Uin, Pre, Ws, SW, Zbas, fpl, OPT_Decouple, Tmod);
+    else %Use the lapsed Ta 
+    U = Uin; %If no glacier cooling then no need to change U
+    end
 
 %     %Run radiation partition to get the radiation for
 %     %distribution (if needed)

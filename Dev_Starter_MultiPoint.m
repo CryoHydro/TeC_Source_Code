@@ -23,15 +23,15 @@ This code launches the Point Scale version of TC model.
 site_num_list = [1 2 3 4 5]; %Please number sequentially
 site_name_list = {'Shallap' 'Torre_Orsina' 'Hybas_Lvl7_Catchment_2070497830' 'Hybas_Lvl7_Catchment_2070497840' 'Pasterze'};
 num_sites = size(site_num_list,2);
-site_num = 1; %Choose site to run, this then selects the correct site directories
+site_num = 5; %Choose site to run, this then selects the correct site directories
 site_name = site_name_list{site_num};
 
 % Choose point or multipoint
 %--------------------------------------------------------------------------
-IniCond.mode = "multipoint";
+IniCond.mode = "point";
 
 % if point mode, then select the point
-selected_ID = 1; %(only if running on laptop, SLURM can be used to state when using HPC) 
+selected_ID = 239; %(only if running on laptop, SLURM can be used to state when using HPC) 
 
 %===================================================
 %% Load config info
