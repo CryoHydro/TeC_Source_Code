@@ -30,7 +30,7 @@ CONFIG_vals.OPT_Veg_Param = 1; % Vegetation parameters (Ccrown, Cwat, Crock, Cur
                                % 1 = one value per landcover type (change the values in VPAR_T directly),
                                % 2 = gridded and variable per landcover (grids in the dtm_file; VPAR_T still
                                %     needed for the Veg_type names, but its values are not used)
-CONFIG_vals.OPT_Decouple  = 0; % Glacier cooling effect on air temperature (Shaw et al., 2025):
+CONFIG_vals.OPT_Decouple  = 1; % Glacier cooling effect on air temperature (Shaw et al., 2025):
                                % 1 = on (needs ModelCoefficients_Decoupling.mat and the FPL grid), 0 = off
 CONFIG_vals.OPT_MPType = "POI"; %If using "multipoint' type of Multipoint run (not "point') can choose type of points to run, POI = points of interest, 
                                 %"CLUSTER" = cluster points, "ALL" = all points. These should be give in the
