@@ -1,4 +1,4 @@
-%% SITE CONFIGURATION - Shallap
+%% SITE CONFIGURATION - Pasterze
 % Read by Launcher_Dev_Distributed.m with run(); defines the structure CONFIG_vals.
 % Empty values ([]) mean "not set".
 % On the HPC, another config file can be used without editing the launcher:
