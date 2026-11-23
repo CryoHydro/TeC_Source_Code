@@ -9,37 +9,37 @@
 %  1. SITE SETUP                                    60-67       choice of the site (site_num)
 %  2. CONFIGURATION                                 68-94       Site_Config file (or TC_CONFIG variable)
 %      2.1   Model structure choices                85-94       OPT_Forcing, OPT_Veg_Param, OPT_Decouple
-%  3. DIRECTORIES                                   95-161      relative paths, run dates, restart
-%  4. OUTPUT FOLDERS                                162-177
-%  5. SPATIAL DATA                                  178-228     grids (dtm_file) and points of interest
-%  6. MODEL PARAMETERS                              229-649
-%      6.1   General options                        231-256     Options_and_NoVegParams.xlsx
-%      6.2   Vegetation parameters                  257-415     VPAR_T.xlsx, Parameters_TC.xlsx
-%      6.3   Glacier and snow parameters            416-498
-%      6.4   Carbon                                 499-512     CO2 series
-%      6.5   Topography and channel parameters      513-578     slope, aspect, flow directions, sky view
-%      6.6   Soil parameters                        579-649
-%  7. INITIAL CONDITIONS                            650-664
-%  8. PARALLEL WORKERS                              665-683     personal computer only
-%  9. DISPLAY OF THE RUN SETTINGS                   684-692
-% 10. METEOROLOGICAL FORCING: SET-UP                693-825     per OPT_Forcing, before the time loop
-%      10.1  Solar variables (just for Lmax_day)    816-825
-% 11. TIME LOOP                                     826-1631
-%      11.1  Distributed forcing                    847-1065    maps of a whole month, once per month
-%      11.2  Forcing of the time step               1066-1104
-%      11.3  Radiation part B                       1105-1118   sun position, terrain correction
-%      11.4  Carbon and other grids                 1119-1128
-%      11.5  Spatial initialization                 1129-1155   vector predefining
-%      11.6  Loop over cells (parfor)               1156-1364   soil biogeochemistry, vegetation, hydrology
-%      11.7  After the loop over cells              1365-1379   sublimation, cell vectors back to grids
-%      11.8  Routing module                         1380-1409
-%      11.9  Avalanches                             1410-1427
-%      11.10 Catchment average snowline             1428-1434
-%      11.11 Fractured rock                         1435-1452
-%      11.12 Albedo map                             1453-1465
-%      11.13 Initial conditions for the next step   1466-1620
-%      11.14 Outputs and checkpoints                1621-1631   Output_Manager
-% 12. COMPUTATIONAL TIME                            1632-1638
+%  3. DIRECTORIES                                   95-162      relative paths, run dates, restart
+%  4. OUTPUT FOLDERS                                163-178
+%  5. SPATIAL DATA                                  179-229     grids (dtm_file) and points of interest
+%  6. MODEL PARAMETERS                              230-650
+%      6.1   General options                        232-257     Options_and_NoVegParams.xlsx
+%      6.2   Vegetation parameters                  258-416     VPAR_T.xlsx, Parameters_TC.xlsx
+%      6.3   Glacier and snow parameters            417-499
+%      6.4   Carbon                                 500-513     CO2 series
+%      6.5   Topography and channel parameters      514-579     slope, aspect, flow directions, sky view
+%      6.6   Soil parameters                        580-650
+%  7. INITIAL CONDITIONS                            651-665
+%  8. PARALLEL WORKERS                              666-684     personal computer only
+%  9. DISPLAY OF THE RUN SETTINGS                   685-693
+% 10. METEOROLOGICAL FORCING: SET-UP                694-823     per OPT_Forcing, before the time loop
+%      10.1  Solar variables (just for Lmax_day)    814-823
+% 11. TIME LOOP                                     824-1569
+%      11.1  Distributed forcing                    845-1003    maps of a whole month, once per month
+%      11.2  Forcing of the time step               1004-1042
+%      11.3  Radiation part B                       1043-1056   sun position, terrain correction
+%      11.4  Carbon and other grids                 1057-1066
+%      11.5  Spatial initialization                 1067-1093   vector predefining
+%      11.6  Loop over cells (parfor)               1094-1302   soil biogeochemistry, vegetation, hydrology
+%      11.7  After the loop over cells              1303-1317   sublimation, cell vectors back to grids
+%      11.8  Routing module                         1318-1347
+%      11.9  Avalanches                             1348-1365
+%      11.10 Catchment average snowline             1366-1372
+%      11.11 Fractured rock                         1373-1390
+%      11.12 Albedo map                             1391-1403
+%      11.13 Initial conditions for the next step   1404-1558
+%      11.14 Outputs and checkpoints                1559-1569   Output_Manager
+% 12. COMPUTATIONAL TIME                            1570-1576
 % (line numbers of this version: they shift when lines are added or removed)
 %==========================================================================
 
@@ -108,8 +108,9 @@ if OPT_Forcing == 1
     % forc_meteo_name, ta_lapse_file, ta_lapse_name, pr_lapse_file, pr_lapse_name and Meteo_el
     forc_function = 'forcing_station_lapse';
 elseif OPT_Forcing == 2
-    Directories.forc_meteo = [Directories.forc '/Bias_corrected/' CONFIG_vals.forc_meteo_folder '/'];
-    Directories.forc_meteoOD = [Directories.forc '/Output_Downscaling/' CONFIG_vals.forc_meteo_folder '/'];
+    % Monthly gridded files: Forcing/forcing_gridded.m, which reads from CONFIG_vals forc_meteo_folder
+    % and forc_meteo_name
+    forc_function = 'forcing_gridded';
 elseif OPT_Forcing == 3
     meteo_name = CONFIG_vals.forc_meteo_name; % e.g. 'Hybas_Lvl7_Catchment_2070497830_250m'
 elseif OPT_Forcing == 4
@@ -695,12 +696,8 @@ if OPT_Aval == 0; disp('Avalanching: off'); else; disp('Avalanching: on'); end
 % Consider sensor heights - you should add these onto the plant height in
 % the zatm parameters
 
-if OPT_Forcing == 2 % =======  Set for fully distributed
-    t_bef = CONFIG_vals.t_bef;
-    t_aft = CONFIG_vals.t_aft;
-
-    %========== For On The Fly distributed forcing ======
-elseif OPT_Forcing == 3
+%========== For On The Fly distributed forcing ======
+if OPT_Forcing == 3
     % -------------------------------------------------------------------------
     % LOAD AND ADJUST ERA5-LAND INPUTS
     % -------------------------------------------------------------------------
@@ -781,7 +778,8 @@ elseif OPT_Forcing == 3
     % clear N Rsws
 
     %========== Forcing function (maps built once per month) ======
-    % OPT_Forcing = 1: Forcing/forcing_station_lapse.m; OPT_Forcing = 4: user function
+    % OPT_Forcing = 1: Forcing/forcing_station_lapse.m; OPT_Forcing = 2: Forcing/forcing_gridded.m;
+    % OPT_Forcing = 4: user function
     % (on the path, e.g. in <site>/Forcing). The function is called with:
     %   Forc_data = fun('load', Directories.forc, Forc_info)   once, loads the data
     %   F = fun('maps', Forc_data, Dates, Forc_grid)            once per month
@@ -794,7 +792,7 @@ elseif OPT_Forcing == 3
     % surface: the terrain correction is applied here], and optionally Tdew [C].
     % Each is a scalar (same value at all hours and in all cells), a vector of nt
     % values (one per hour, same in all cells), or a matrix nt x num_cell.
-elseif OPT_Forcing == 1 || OPT_Forcing == 4
+elseif OPT_Forcing == 1 || OPT_Forcing == 2 || OPT_Forcing == 4
     if exist(forc_function,'file') ~= 2
         error('Forcing function not found on the path: %s', forc_function)
     end
@@ -853,7 +851,7 @@ for t = t_start:N_time_step
     % So create new data every month
     if ~exist('Ta_Sm', 'var') || str2num(yy) ~= year_loaded || str2num(mth) ~= month_loaded
         date_forMonth = Date_generator(str2double(yy),str2double(mth)); % Hours of this month, used to select the forcing
-        if OPT_Forcing == 1 || OPT_Forcing == 4
+        if OPT_Forcing == 1 || OPT_Forcing == 2 || OPT_Forcing == 4
             date_forMonth = date_forMonth(ismember(date_forMonth,Date)); % Only the hours of the month within the run period
         end
 
@@ -864,66 +862,6 @@ for t = t_start:N_time_step
         % ===========================================
         % Then create grids for every cell so time in rows, space in columns
         % Preallocate where necessary
-
-        %========= Load gridded data ========
-        if OPT_Forcing == 2
-            % Sort time
-            StartMonth = datetime(str2double(yy),str2double(mth),1,0,0,0,0);
-            EndMonth = dateshift(StartMonth,'end','month'); EndMonth = EndMonth + hours(23);
-            Forcing_Date = StartMonth:hours(1):EndMonth; Forcing_Date = Forcing_Date';
-            id_date_for_month = ismember(Forcing_Date,date_forMonth); % So this is the index of the forcing data for this month. date_forMonth created in Initialising outputs
-            size_time_in_month = sum(id_date_for_month);
-            % Load variables
-            forc_vars = ["t2m" "d2m" "tp" "RH" "sp" "ws10" "strd" "N" "PARB" "PARD" "SAB1" "SAB2" "SAD1" "SAD2"];
-            forc_names = split(CONFIG_vals.forc_meteo_name);
-            OD_vars = contains(forc_vars,["RH","strd","sp","ws10"]);
-            num_forc_vars = size(forc_vars,2);
-            for v = 1:num_forc_vars
-                if OD_vars(v)==0
-                    fn = char(strcat(Directories.forc_meteo,yy,'/',forc_vars(v), '_',yy,'_',mth,'.mat'));
-                    Forc_S.forc_vars{v} = load(fn);
-                else
-                    fn = char(strcat(Directories.forc_meteoOD,yy,'/',forc_vars(v), '_',yy,'_',mth,'.mat'));
-                    Forc_S.forc_vars{v} = load(fn);
-                end
-            end
-
-            % Then decompress, flip and reshape
-            for v = 1:num_forc_vars
-                %** Warning the decompress code changes the magnitude of the
-                % variables so they should have been compressed before. **
-                Forc_S_dc.(forc_vars{v}) = Data_compressor_grid(Forc_S.forc_vars{v}.(forc_names{v}),forc_vars(v),"decompress");
-                Forc_S_dc.(forc_vars{v}) = flipud(Forc_S_dc.(forc_vars{v}));
-                for ht = 1:size(Forcing_Date,1) % Probably this could be faster
-                    Forc_S_dc_r.(forc_vars{v})(ht,:) = reshape(Forc_S_dc.(forc_vars{v})(:,:,ht),[1,num_cell]); % Reshape to be time (rows) by grid cells (columns)
-                end
-            end
-            % Bring into correct names and apply small corrections
-            % Also crops in case the run time is shorter
-            Ta_Sm = double(Forc_S_dc_r.t2m(id_date_for_month,:)); % Air temperature, degrees C
-            Pr_Sm = double(Forc_S_dc_r.tp(id_date_for_month,:)); % Precipitation, mm
-            U_Sm = double(Forc_S_dc_r.RH(id_date_for_month,:)); % Relative humidity, %
-            N_Sm = double(Forc_S_dc_r.strd(id_date_for_month,:)); % Incoming Longwave (note N in the ERA data is cloudiness), Wm^-2
-            Tdew_Sm = double(Forc_S_dc_r.d2m(id_date_for_month,:)); % Dew point temperature, degrees C
-            Pre_Sm = double(Forc_S_dc_r.sp(id_date_for_month,:)); % Surface pressure
-            Ws_Sm = double(Forc_S_dc_r.ws10(id_date_for_month,:)); % Wind speed, ms-1
-            SAB1_Sm = double(Forc_S_dc_r.SAB1(id_date_for_month,:)); % First band direct radiation, Wm^-2
-            SAB2_Sm = double(Forc_S_dc_r.SAB2(id_date_for_month,:)); % Second band direct radiation, Wm^-2
-            SAD1_Sm = double(Forc_S_dc_r.SAD1(id_date_for_month,:)); % First band diffuse radiation, Wm^-2
-            SAD2_Sm = double(Forc_S_dc_r.SAD2(id_date_for_month,:)); % Second band diffuse radiation, Wm^-2
-            PARB_Sm = double(Forc_S_dc_r.PARB(id_date_for_month,:)); % PAR radiation direct, Wm^-2
-            PARD_Sm = double(Forc_S_dc_r.PARD(id_date_for_month,:)); % PAR radiation diffuse Wm^-2
-
-            % Corrections
-            if max(max(U_Sm))>=1
-                U_Sm = U_Sm./100; % Turn into fraction
-                U_Sm(U_Sm>1) = 1; % Cannot be more than 100%
-            end
-            Ws_Sm(Ws_Sm < 0.01) = 0.01; % To prevent 0 turbulent fluxes
-            if max(max(Pre_Sm))>10000
-                Pre_Sm = Pre_Sm./100; % Convert from Pascals to mbar/hectopascal
-            end
-        end
 
         %========= On-The_Fly Downscaling ========
         if OPT_Forcing == 3
@@ -991,8 +929,8 @@ for t = t_start:N_time_step
 
         end
 
-        %========= Forcing function: station + lapse rates (1) or user function (4), all hours of the month ========
-        if OPT_Forcing == 1 || OPT_Forcing == 4
+        %========= Forcing function: station + lapse rates (1), gridded (2) or user function (4), all hours of the month ========
+        if OPT_Forcing == 1 || OPT_Forcing == 2 || OPT_Forcing == 4
             size_time_in_month = numel(date_forMonth);
             F = forc_fun('maps', Forc_data, date_forMonth, Forc_grid);
             if ~isfield(F,'Tdew'); forc_list = forc_vars_4; else; forc_list = [forc_vars_4 {'Tdew'}]; end
@@ -1016,7 +954,7 @@ for t = t_start:N_time_step
             Ta_Sm = F.Ta; Pr_Sm = F.Pr; U_Sm = F.U; N_Sm = F.N; Ws_Sm = F.Ws; Pre_Sm = F.Pre;
             SAB1_Sm = F.SAB1; SAB2_Sm = F.SAB2; SAD1_Sm = F.SAD1; SAD2_Sm = F.SAD2; PARB_Sm = F.PARB; PARD_Sm = F.PARD;
 
-            % Corrections (as for OPT_Forcing = 2); U from forcing_station_lapse is in %
+            % Corrections; U from forcing_station_lapse and forcing_gridded is in %
             if max(U_Sm(:,MASKn==1),[],'all')>1
                 U_Sm = U_Sm./100; % Turn into fraction
             end
