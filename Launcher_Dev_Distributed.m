@@ -9,37 +9,37 @@
 %  1. SITE SETUP                                    60-67       choice of the site (site_num)
 %  2. CONFIGURATION                                 68-94       Site_Config file (or TC_CONFIG variable)
 %      2.1   Model structure choices                85-94       OPT_Forcing, OPT_Veg_Param, OPT_Decouple
-%  3. DIRECTORIES                                   95-162      relative paths, run dates, restart
-%  4. OUTPUT FOLDERS                                163-178
-%  5. SPATIAL DATA                                  179-229     grids (dtm_file) and points of interest
-%  6. MODEL PARAMETERS                              230-650
-%      6.1   General options                        232-257     Options_and_NoVegParams.xlsx
-%      6.2   Vegetation parameters                  258-416     VPAR_T.xlsx, Parameters_TC.xlsx
-%      6.3   Glacier and snow parameters            417-499
-%      6.4   Carbon                                 500-513     CO2 series
-%      6.5   Topography and channel parameters      514-579     slope, aspect, flow directions, sky view
-%      6.6   Soil parameters                        580-650
-%  7. INITIAL CONDITIONS                            651-665
-%  8. PARALLEL WORKERS                              666-684     personal computer only
-%  9. DISPLAY OF THE RUN SETTINGS                   685-693
-% 10. METEOROLOGICAL FORCING: SET-UP                694-823     per OPT_Forcing, before the time loop
-%      10.1  Solar variables (just for Lmax_day)    814-823
-% 11. TIME LOOP                                     824-1569
-%      11.1  Distributed forcing                    845-1003    maps of a whole month, once per month
-%      11.2  Forcing of the time step               1004-1042
-%      11.3  Radiation part B                       1043-1056   sun position, terrain correction
-%      11.4  Carbon and other grids                 1057-1066
-%      11.5  Spatial initialization                 1067-1093   vector predefining
-%      11.6  Loop over cells (parfor)               1094-1302   soil biogeochemistry, vegetation, hydrology
-%      11.7  After the loop over cells              1303-1317   sublimation, cell vectors back to grids
-%      11.8  Routing module                         1318-1347
-%      11.9  Avalanches                             1348-1365
-%      11.10 Catchment average snowline             1366-1372
-%      11.11 Fractured rock                         1373-1390
-%      11.12 Albedo map                             1391-1403
-%      11.13 Initial conditions for the next step   1404-1558
-%      11.14 Outputs and checkpoints                1559-1569   Output_Manager
-% 12. COMPUTATIONAL TIME                            1570-1576
+%  3. DIRECTORIES                                   95-164      relative paths, run dates, restart
+%  4. OUTPUT FOLDERS                                165-180
+%  5. SPATIAL DATA                                  181-231     grids (dtm_file) and points of interest
+%  6. MODEL PARAMETERS                              232-652
+%      6.1   General options                        234-259     Options_and_NoVegParams.xlsx
+%      6.2   Vegetation parameters                  260-418     VPAR_T.xlsx, Parameters_TC.xlsx
+%      6.3   Glacier and snow parameters            419-501
+%      6.4   Carbon                                 502-515     CO2 series
+%      6.5   Topography and channel parameters      516-581     slope, aspect, flow directions, sky view
+%      6.6   Soil parameters                        582-652
+%  7. INITIAL CONDITIONS                            653-667
+%  8. PARALLEL WORKERS                              668-686     personal computer only
+%  9. DISPLAY OF THE RUN SETTINGS                   687-695
+% 10. METEOROLOGICAL FORCING: SET-UP                696-744     per OPT_Forcing, before the time loop
+%      10.1  Solar variables (just for Lmax_day)    735-744
+% 11. TIME LOOP                                     745-1424
+%      11.1  Distributed forcing                    766-858     maps of a whole month, once per month
+%      11.2  Forcing of the time step               859-897
+%      11.3  Radiation part B                       898-911     sun position, terrain correction
+%      11.4  Carbon and other grids                 912-921
+%      11.5  Spatial initialization                 922-948     vector predefining
+%      11.6  Loop over cells (parfor)               949-1157    soil biogeochemistry, vegetation, hydrology
+%      11.7  After the loop over cells              1158-1172   sublimation, cell vectors back to grids
+%      11.8  Routing module                         1173-1202
+%      11.9  Avalanches                             1203-1220
+%      11.10 Catchment average snowline             1221-1227
+%      11.11 Fractured rock                         1228-1245
+%      11.12 Albedo map                             1246-1258
+%      11.13 Initial conditions for the next step   1259-1413
+%      11.14 Outputs and checkpoints                1414-1424   Output_Manager
+% 12. COMPUTATIONAL TIME                            1425-1431
 % (line numbers of this version: they shift when lines are added or removed)
 %==========================================================================
 
@@ -112,7 +112,9 @@ elseif OPT_Forcing == 2
     % and forc_meteo_name
     forc_function = 'forcing_gridded';
 elseif OPT_Forcing == 3
-    meteo_name = CONFIG_vals.forc_meteo_name; % e.g. 'Hybas_Lvl7_Catchment_2070497830_250m'
+    % On-the-fly downscaling of ERA5-Land: Forcing/forcing_downscaling.m, which reads from CONFIG_vals
+    % forc_meteo_name and OPT_RunBC (needs the TC_Downscaling repository on the MATLAB path)
+    forc_function = 'forcing_downscaling';
 elseif OPT_Forcing == 4
     forc_function = CONFIG_vals.forc_function; % Name of the user forcing function, e.g. 'Kyzylsu_forcing' (file <site>/Forcing/Kyzylsu_forcing.m)
 end
@@ -696,108 +698,27 @@ if OPT_Aval == 0; disp('Avalanching: off'); else; disp('Avalanching: on'); end
 % Consider sensor heights - you should add these onto the plant height in
 % the zatm parameters
 
-%========== For On The Fly distributed forcing ======
-if OPT_Forcing == 3
-    % -------------------------------------------------------------------------
-    % LOAD AND ADJUST ERA5-LAND INPUTS
-    % -------------------------------------------------------------------------
-    OPT_Run_BC = CONFIG_vals.OPT_RunBC;
-    dsERA = load([meteo_name '_ERAdata.mat']);
-    % Ensure alignment of ERA data to model run period
-    [~,ia,ib] = intersect(Date,dsERA.dateTimes);
-    FN = fieldnames(dsERA);
-    for vv = 1:length(FN)
-        if length(size(dsERA.(FN{vv})))==3
-            dsERA.(FN{vv}) = dsERA.(FN{vv})(:,:,ib);
-        end
-    end
-    dsERA.dateTimes = dsERA.dateTimes(ib);
-    dsERA.TLR = dsERA.TLR(ib);
-
-    % -------------------------------------------------------------------------
-    % LOAD AND ADJUST DEM GRID DATA FOR DOWNSCALING USE
-    % -------------------------------------------------------------------------
-    dsGRID = load([meteo_name '_GRIDdata.mat']);
-    dsGRID = rmfield(dsGRID,{'dsLats','dsLons','dsZs','dsNames'}); % will remove later
-
-    nYr = years(Date(end)-Date(1));
-    [~,ia,ib] = intersect(dsERA.dateTimes,Date);
-    dsERA.tpMean = nansum(dsERA.tp(:,:,ia),3)/nYr;
-
-    dsERA.tpLr = 0.0003; % NEWER VERSIONS HAVE THIS ALREADY INSIDE dsERA.   SO COULD REMOVE IN FUTURE
-
-    n = 1500;
-    dsGRID.demCurv = getcurvature(dsGRID.demZs,n);
-    dsGRID.pixelSize = abs(dsGRID.demLats(1,1)-dsGRID.demLats(2,1))*111.1e3; % (m)
-    [dsGRID.demSlope,dsGRID.demAspect] = slopeaspect(dsGRID.demZs,dsGRID.pixelSize);
-
-    load([meteo_name '_BC_Coefficients.mat']);
-
-    % -------------------------------------------------------------------------
-    % CONFIGURATION FIELDS FOR ON-THE-FLY GRID DOWNSCALING
-    % -------------------------------------------------------------------------
-    cfg.runMode = 'OTF'; %  'OTF' or 'save'
-    cfg.dim = 'grid'; %  'grid', 'cluster', or 'points'
-    cfg.DoubleOutput = 1; % output both downscaled AND bias-corrected data (if relevant)
-    cfg.RunRadiationPartition = 1; % If desire to run radiation partition. 1 = yes
-    cfg.Date = Date; % datetime vector at hourly resolution
-    cfg.UTC = IniCond.DeltaGMT;
-    cfg.VarNames = {'TA','RH','PP','FF','SWIN','LWIN','PRESS'}; % cell array, e.g. {'TA','RH','PP','SWIN','FF'}
-    cfg.VarDS = {'dsT2m','dsRH','dsTp','dsWs10','dsSsrd','dsStrd','dsSp'}; % output field names corresponding to VarNames
-    cfg.VarOut = {'Ta','RH','Pr','Ws','Swin','N','Pre'}; % output field names corresponding to VarNames
-    cfg.FullNames = {'Air Temperature','Relative Humidity','Precipitation','Wind Speed','Shortwave Radiation','Longwave Radiation','Air Pressure'}; % display names corresponding to VarNames
-
-    cfg.dsLats = []; %: grid latitudes
-    cfg.dsLons = []; %: grid longitudes
-    cfg.dsZs = []; %: grid elevations
-
-    cfg.RunBC = OPT_Run_BC; % Run Bias Correction? 1 = yes
-    cfg.BC = COEFFS; % structure containing monthly EQM information.
-
-    cfg.bcLats = COEFFS.bcLats; %: POI latitudes
-    cfg.bcLons = COEFFS.bcLons; %: POI longitudes
-    cfg.bcZs = COEFFS.bcZs; %: POI elevations
-
-    cfg.foOut = []; % output directory (required if cfg.runMode = 'save')
-
-    cfg.dsNames = []; % point names, required for dim = 'points' and save
-    cfg.clusterNumber = []; % cluster IDs, required for dim = 'cluster' and save
-
-    cfg.precipLimit = 0.1; % precipLimit;    % precipitation threshold (mm hr); default 0.1   - Provide as parameter OPT?
-    cfg.windMinimum = 0.1; % windMinimum;   % wind-speed minimum (m s-1); default 0.3;                - Provide as parameter OPT?
-    cfg.writeBiasCorr = true; % optional logical; default true
-
-    %
-    %
-    %     % Create radiation partition on ERA grid for initial t_bef/t_aft
-    %     MidCell = [floor(size(dsERA.zs,1)/2),floor(size(dsERA.zs,2)/2)];
-    %     GRAPH_VAR=0;
-    %     [SD,SB,SAD1,SAD2,SAB1,SAB2,PARB,PARD,N,Rsws,t_bef,t_aft]=Automatic_Radiation_Partition_I(datenum(Date),Lat,Lon,...
-    %         dsERA.zs(MidCell(1),MidCell(2)),IniCond.DeltaGMT,squeeze(dsERA.tp(MidCell(1),MidCell(2))),squeeze(dsERA.d2m(MidCell(1),MidCell(2),:)),...
-    %         squeeze(dsERA.ssrd(MidCell(1),MidCell(2),:)),GRAPH_VAR);
-    % clear N Rsws
-
-    %========== Forcing function (maps built once per month) ======
-    % OPT_Forcing = 1: Forcing/forcing_station_lapse.m; OPT_Forcing = 2: Forcing/forcing_gridded.m;
-    % OPT_Forcing = 4: user function
-    % (on the path, e.g. in <site>/Forcing). The function is called with:
-    %   Forc_data = fun('load', Directories.forc, Forc_info)   once, loads the data
-    %   F = fun('maps', Forc_data, Dates, Forc_grid)            once per month
-    % Forc_info: CONFIG (CONFIG_vals), Lat, Lon, DeltaGMT.
-    % Forc_data may contain t_bef and t_aft; otherwise they are read from CONFIG_vals.
-    % Dates: column of the hours of the month within the run period (nt values).
-    % Forc_grid: cell vectors (num_cell x 1) DTM, MASK, GLH, DEB_MAP, x, y, and num_cell, cellsize.
-    % F must contain Ta [C], Pr [mm per time step], U [RH, fraction or %], N [W m-2],
-    % Ws [m s-1], Pre [hPa or Pa], SAB1, SAB2, SAD1, SAD2, PARB, PARD [W m-2, flat
-    % surface: the terrain correction is applied here], and optionally Tdew [C].
-    % Each is a scalar (same value at all hours and in all cells), a vector of nt
-    % values (one per hour, same in all cells), or a matrix nt x num_cell.
-elseif OPT_Forcing == 1 || OPT_Forcing == 2 || OPT_Forcing == 4
+%========== Forcing function (maps built once per month) ======
+% OPT_Forcing = 1: Forcing/forcing_station_lapse.m; OPT_Forcing = 2: Forcing/forcing_gridded.m;
+% OPT_Forcing = 3: Forcing/forcing_downscaling.m; OPT_Forcing = 4: user function
+% (on the path, e.g. in <site>/Forcing). The function is called with:
+%   Forc_data = fun('load', Directories.forc, Forc_info)   once, loads the data
+%   F = fun('maps', Forc_data, Dates, Forc_grid)            once per month
+% Forc_info: CONFIG (CONFIG_vals), Date (run period), Lat, Lon, DeltaGMT.
+% Forc_data may contain t_bef and t_aft; otherwise they are read from CONFIG_vals.
+% Dates: column of the hours of the month within the run period (nt values).
+% Forc_grid: cell vectors (num_cell x 1) DTM, MASK, GLH, DEB_MAP, x, y, and num_cell, cellsize.
+% F must contain Ta [C], Pr [mm per time step], U [RH, fraction or %], N [W m-2],
+% Ws [m s-1], Pre [hPa or Pa], SAB1, SAB2, SAD1, SAD2, PARB, PARD [W m-2, flat
+% surface: the terrain correction is applied here], and optionally Tdew [C].
+% Each is a scalar (same value at all hours and in all cells), a vector of nt
+% values (one per hour, same in all cells), or a matrix nt x num_cell.
+if any(OPT_Forcing == [1 2 3 4])
     if exist(forc_function,'file') ~= 2
         error('Forcing function not found on the path: %s', forc_function)
     end
     forc_fun = str2func(forc_function);
-    Forc_info = struct('CONFIG',CONFIG_vals, 'Lat',Lat, 'Lon',Lon, 'DeltaGMT',IniCond.DeltaGMT);
+    Forc_info = struct('CONFIG',CONFIG_vals, 'Date',Date(:), 'Lat',Lat, 'Lon',Lon, 'DeltaGMT',IniCond.DeltaGMT);
     Forc_data = forc_fun('load', Directories.forc, Forc_info);
     if isfield(Forc_data,'t_bef') % Integration interval of the solar variables
         t_bef = Forc_data.t_bef; t_aft = Forc_data.t_aft;
@@ -851,7 +772,7 @@ for t = t_start:N_time_step
     % So create new data every month
     if ~exist('Ta_Sm', 'var') || str2num(yy) ~= year_loaded || str2num(mth) ~= month_loaded
         date_forMonth = Date_generator(str2double(yy),str2double(mth)); % Hours of this month, used to select the forcing
-        if OPT_Forcing == 1 || OPT_Forcing == 2 || OPT_Forcing == 4
+        if any(OPT_Forcing == [1 2 3 4])
             date_forMonth = date_forMonth(ismember(date_forMonth,Date)); % Only the hours of the month within the run period
         end
 
@@ -863,74 +784,8 @@ for t = t_start:N_time_step
         % Then create grids for every cell so time in rows, space in columns
         % Preallocate where necessary
 
-        %========= On-The_Fly Downscaling ========
-        if OPT_Forcing == 3
-
-            StartMonth = datetime(str2double(yy),str2double(mth),1,0,0,0,0); % Derive the monthly timesteps
-            EndMonth = dateshift(StartMonth,'end','month'); EndMonth = EndMonth + hours(23);
-            Forcing_Date = StartMonth:hours(1):EndMonth; Forcing_Date = Forcing_Date';
-
-            dsERAsub = dsERA; % Make a copy of the ERA5 data
-            [~,ia,ib] = intersect(Forcing_Date,dsERA.dateTimes); % Find the overlapping timesteps
-            FN = fieldnames(dsERAsub); % get field names from the ERA5 data structure
-
-            % %%%%% A SUB-TIMING TEST DUE TO A SLOW RADIATION PARTITION
-            % ib = 1:48;
-            % cfg.Date = Date(1:48);
-            % cfg.RunRadiationPartition = 0;
-            % %%%%
-
-            for vv = 1:length(FN) % Adjust the timesteps on the 3D matrices
-                if length(size(dsERAsub.(FN{vv})))==3
-                    dsERAsub.(FN{vv}) = dsERAsub.(FN{vv})(:,:,ib);
-                end
-            end
-            % adjust the timing of the date itself and the lapse rates
-            dsERAsub.dateTimes = dsERAsub.dateTimes(ib);
-            dsERAsub.TLR = dsERAsub.TLR(ib);
-
-            % MAIN DOWNSCALING CODE
-            %--------------------
-            OTF = downscale_4_T_C(cfg,dsERAsub,dsGRID);
-            %--------------------
-
-            try % Open structure containing bias-corrected fields. If no bias correction is found /or applied, the non-bias-corrected files are opened from the structure
-                FN = fieldnames(OTF.biasCorrected);
-                for ff = 1:length(FN)
-                    [m,n,q] = size(OTF.biasCorrected.(FN{ff}));
-                    OTF.biasCorrected.(FN{ff}) = transpose(reshape(flipud(OTF.biasCorrected.(FN{ff})),[m*n,q]));
-                end
-                v2struct(OTF.biasCorrected) % this v2struct should stay ideally
-            catch
-                FN = fieldnames(OTF.downscaled);
-                for ff = 1:length(FN)
-                    [m,n,q] = size(OTF.downscaled.(FN{ff}));
-                    OTF.downscaled.(FN{ff}) = transpose(reshape(flipud(OTF.downscaled.(FN{ff})),[m*n,q]));
-                end
-                v2struct(OTF.downscaled) % this v2struct should stay ideally
-            end
-
-            U_Sm = RH / 100;
-            % ADJUST OTHER NAMES HERE (FOR THE CURRENT WORKING CONVENTION) - (30/10/26)
-            Ta_Sm = Ta;
-            Pr_Sm = Pr;
-            Ws_Sm = Ws;
-            N_Sm = N;
-            Pre_Sm = Pre;
-            SAB1_Sm = SAB1;
-            SAB2_Sm = SAB2;
-            SAD1_Sm = SAD1;
-            SAD2_Sm = SAD2;
-            PARB_Sm = PARB;
-            PARD_Sm = PARD;
-
-            Tdew_Sm = (243.12 .* (log(U_Sm) + (17.62 .* Ta_Sm)./(243.12 + Ta_Sm))) ./ ...
-             (17.62 - (log(U_Sm) + (17.62 .* Ta_Sm)./(243.12 + Ta_Sm)));
-
-        end
-
-        %========= Forcing function: station + lapse rates (1), gridded (2) or user function (4), all hours of the month ========
-        if OPT_Forcing == 1 || OPT_Forcing == 2 || OPT_Forcing == 4
+        %========= Forcing function: station + lapse rates (1), gridded (2), downscaling (3) or user function (4), all hours of the month ========
+        if any(OPT_Forcing == [1 2 3 4])
             size_time_in_month = numel(date_forMonth);
             F = forc_fun('maps', Forc_data, date_forMonth, Forc_grid);
             if ~isfield(F,'Tdew'); forc_list = forc_vars_4; else; forc_list = [forc_vars_4 {'Tdew'}]; end
@@ -954,7 +809,7 @@ for t = t_start:N_time_step
             Ta_Sm = F.Ta; Pr_Sm = F.Pr; U_Sm = F.U; N_Sm = F.N; Ws_Sm = F.Ws; Pre_Sm = F.Pre;
             SAB1_Sm = F.SAB1; SAB2_Sm = F.SAB2; SAD1_Sm = F.SAD1; SAD2_Sm = F.SAD2; PARB_Sm = F.PARB; PARD_Sm = F.PARD;
 
-            % Corrections; U from forcing_station_lapse and forcing_gridded is in %
+            % Corrections; U from forcing_station_lapse, forcing_gridded and forcing_downscaling is in %
             if max(U_Sm(:,MASKn==1),[],'all')>1
                 U_Sm = U_Sm./100; % Turn into fraction
             end
