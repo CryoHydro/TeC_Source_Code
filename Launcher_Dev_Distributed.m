@@ -808,11 +808,11 @@ for t = t_start:N_time_step
 
         % Corrections; U from forcing_station_lapse, forcing_gridded and forcing_downscaling is in %
         if max(U_Sm(:,MASKn==1),[],'all')>1
-            U_Sm = U_Sm./100; % Turn into fraction
+            U_Sm = U_Sm./100; % Turn % into fraction
         end
         U_Sm(U_Sm>1) = 1; U_Sm(U_Sm<0) = 0; % Between 0 and 100%
         Ws_Sm(Ws_Sm < 0.01) = 0.01; % To prevent 0 turbulent fluxes
-        Pr_Sm(Pr_Sm < 0) = 0;
+        Pr_Sm(Pr_Sm < 0) = 0; % No negative precipitation
         if max(Pre_Sm(:,MASKn==1),[],'all')>10000
             Pre_Sm = Pre_Sm./100; % Convert from Pascals to mbar/hectopascal
         end
