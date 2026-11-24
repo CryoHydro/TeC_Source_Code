@@ -24,22 +24,22 @@
 %  9. DISPLAY OF THE RUN SETTINGS                   699-707
 % 10. METEOROLOGICAL FORCING: SET-UP                708-754     forcing function, before the time loop
 %      10.1  Solar variables (just for Lmax_day)    745-754
-% 11. TIME LOOP                                     755-1430
-%      11.1  Distributed forcing                    776-864     maps of a whole month, once per month
-%      11.2  Forcing of the time step               865-903
-%      11.3  Radiation part B                       904-917     sun position, terrain correction
-%      11.4  Carbon and other grids                 918-927
-%      11.5  Spatial initialization                 928-954     vector predefining
-%      11.6  Loop over cells (parfor)               955-1163    soil biogeochemistry, vegetation, hydrology
-%      11.7  After the loop over cells              1164-1178   sublimation, cell vectors back to grids
-%      11.8  Routing module                         1179-1208
-%      11.9  Avalanches                             1209-1226
-%      11.10 Catchment average snowline             1227-1233
-%      11.11 Fractured rock                         1234-1251
-%      11.12 Albedo map                             1252-1264
-%      11.13 Initial conditions for the next step   1265-1419
-%      11.14 Outputs and checkpoints                1420-1430   Output_Manager
-% 12. COMPUTATIONAL TIME                            1431-1437
+% 11. TIME LOOP                                     755-1414
+%      11.1  Distributed forcing                    773-851     maps of a whole month, once per month
+%      11.2  Forcing of the time step               852-887
+%      11.3  Radiation part B                       888-901     sun position, terrain correction
+%      11.4  Carbon and other grids                 902-911
+%      11.5  Spatial initialization                 912-938     vector predefining
+%      11.6  Loop over cells (parfor)               939-1147    soil biogeochemistry, vegetation, hydrology
+%      11.7  After the loop over cells              1148-1162   sublimation, cell vectors back to grids
+%      11.8  Routing module                         1163-1192
+%      11.9  Avalanches                             1193-1210
+%      11.10 Catchment average snowline             1211-1217
+%      11.11 Fractured rock                         1218-1235
+%      11.12 Albedo map                             1236-1248
+%      11.13 Initial conditions for the next step   1249-1403
+%      11.14 Outputs and checkpoints                1404-1414   Output_Manager
+% 12. COMPUTATIONAL TIME                            1415-1421
 % (line numbers of this version: they shift when lines are added or removed)
 %==========================================================================
 
@@ -739,7 +739,7 @@ end
 % Grids given to the forcing function (cell vectors, same order as the model)
 Forc_grid = struct('DTM',DTMn, 'MASK',MASKn, 'GLH',GLHn, 'DEB_MAP',DEB_MAPn, ...
     'num_cell',num_cell, 'cellsize',cellsize, 'x',x_cell, 'y',y_cell);
-forc_vars_4 = {'Ta','Pr','U','N','Ws','Pre','SAB1','SAB2','SAD1','SAD2','PARB','PARD'};
+forc_vars = {'Ta','Pr','U','N','Ws','Pre','SAB1','SAB2','SAD1','SAD2','PARB','PARD'};
 disp(['Forcing: function ' forc_function ' (maps built once per month)'])
 
 %% 10.1 Solar variables (just for Lmax_day)
@@ -769,33 +769,23 @@ for t = t_start:N_time_step
     %----------------------------------------------------------------------
     yy = char(num2str(Datam_S(1,1)));
     mth = char(num2str(Datam_S(1,2)));
-    day = char(num2str(Datam_S(1,3)));
-    hhlast = char(num2str(Datam_S(1,4)));
-    Date_run = datetime(Datam_S(1,1), Datam_S(1,2), Datam_S(1,3));
 
     %% 11.1 Distributed forcing
     %----------------------------------------------------------------------
-    % Forcing from stations and distributed across the catchment.
-    % Create spatial input data on first day and hour of month
+    % Forcing maps (time in rows, cells in columns) built by the forcing function
+    % for all the hours of the month, at the first time step of each month
     %======================================================================
 
-    % So create new data every month
     if ~exist('Ta_Sm', 'var') || str2num(yy) ~= year_loaded || str2num(mth) ~= month_loaded
         date_forMonth = Date_generator(str2double(yy),str2double(mth)); % Hours of this month, used to select the forcing
         date_forMonth = date_forMonth(ismember(date_forMonth,Date)); % Only the hours of the month within the run period
 
         disp(['New forcing loaded for period: ' char(num2str(yy)) '-' char(num2str(mth)) ])
 
-        %=============================================
-        % Distributed meteorological variables
-        % ===========================================
-        % Then create grids for every cell so time in rows, space in columns
-        % Preallocate where necessary
-
         %========= Forcing function (forc_function), all hours of the month ========
         size_time_in_month = numel(date_forMonth);
         F = forc_fun('maps', Forc_data, date_forMonth, Forc_grid);
-        if ~isfield(F,'Tdew'); forc_list = forc_vars_4; else; forc_list = [forc_vars_4 {'Tdew'}]; end
+        if ~isfield(F,'Tdew'); forc_list = forc_vars; else; forc_list = [forc_vars {'Tdew'}]; end
         for v = 1:numel(forc_list)
             if ~isfield(F,forc_list{v})
                 error('Forcing function %s: variable %s missing', forc_function, forc_list{v})
@@ -849,26 +839,20 @@ for t = t_start:N_time_step
         % Vapour pressure from the distributed Ta and U (time x cell); Tdew is not recalculated
         % NOTE SHOULD WE ADJUST DEW POINT WITH LOWER AIR TEMP FROM TMOD?
         [esat_Sm, ea_Sm, Ds_Sm] = forcing_vapour_pressure(Ta_Sm, U_Sm);
-        clear a b xr;
 
         %---- Check variables -----
         % We only check inside the mask in case there are NaNs outside.
         check_var_3D(Ta_Sm(:,MASKn==1),Tdew_Sm(:,MASKn==1),Pr_Sm(:,MASKn==1),N_Sm(:,MASKn==1),Ws_Sm(:,MASKn==1),Pre_Sm(:,MASKn==1),esat_Sm(:,MASKn==1),ea_Sm(:,MASKn==1),U_Sm(:,MASKn==1),SAD1_Sm(:,MASKn==1),SAD2_Sm(:,MASKn==1),SAB1_Sm(:,MASKn==1),SAB2_Sm(:,MASKn==1),PARB_Sm(:,MASKn==1),PARD_Sm(:,MASKn==1));
 
-        %   % Store year and month loaded
-        %   %----------------------------------------------------------------------
+        % Store year and month loaded
         year_loaded = str2num(yy);
         month_loaded = str2num(mth);
-        %
     end % Loading month of data
 
     %% 11.2 Forcing of the time step
     %----------------------------------------------------------------------
     % Finding the row in the forcing of the modeling date
     t_forc = find(Date(t-1) == date_forMonth); % Pulls out the index for the hour - note this means that it actually starts on t=1
-
-    % Put here downscaling
-    % And the partition of SW
 
     % Export timestep (a row for all the cells)
     Ta_S = Ta_Sm(t_forc,:);
