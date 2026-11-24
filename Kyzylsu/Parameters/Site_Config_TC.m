@@ -24,8 +24,10 @@ CONFIG_vals.Restart_Date = [];               % Date of the checkpoint to restart
 CONFIG_vals.Restart_Run  = 'Kyzylsu_Q_fixed'; % Name of run to restart from
 
 %% Model options
-CONFIG_vals.OPT_Forcing   = 1; % Type of forcing: 1 = from AWS which is distributed, 2 = fully gridded, 3 = on-the-fly downscaling,
-                               % 4 = user forcing function (maps built at each time step)
+CONFIG_vals.forc_function = 'forcing_station_lapse'; % Forcing function (maps built once per month):
+                               % 'forcing_station_lapse' = one station + lapse rates (settings below),
+                               % 'forcing_gridded' = monthly gridded files, 'forcing_downscaling' = on-the-fly
+                               % downscaling of ERA5-Land, or a user function, e.g. 'Kyzylsu_forcing' (below)
 CONFIG_vals.OPT_Veg_Param = 1; % Vegetation parameters (Ccrown, Cwat, Crock, Curb, Cbare):
                                % 1 = one value per landcover type (change the values in VPAR_T directly),
                                % 2 = gridded and variable per landcover (grids in the dtm_file; VPAR_T still
@@ -36,7 +38,7 @@ CONFIG_vals.OPT_Decouple  = 1; % Glacier cooling effect on air temperature, over
                                % 3 = bias TmodB, then multiplier TmodM where Ta > 0
                                %     (TmodB, TmodM in Options_and_NoVegParams.xlsx)
 
-%% Meteorological forcing (used if OPT_Forcing = 1)
+%% Meteorological forcing (used by forcing_station_lapse)
 CONFIG_vals.Meteo_el        = 3371;                      % Elevation of meteorological station [m a.s.l.]
 CONFIG_vals.forc_meteo_file = 'Kyzylsu_Pluvio_meteo.mat'; % File of the meteorological station data (.mat)
 CONFIG_vals.forc_meteo_name = 'Meteo_data';               % Variable name of meteorological data in that file
@@ -51,15 +53,15 @@ CONFIG_vals.pr_lapse_name   = 'Pr_lapse';                 % Variable name within
 CONFIG_vals.PreProc_folder = 'Kyzylsu_100m_STEP1'; % Folder containing preprocessing of grids (dtm + POI_dtm file from STEP1_Kyzylsu_100m.m)
 CONFIG_vals.dtm_file       = 'dtm_Kyzylsu_100m.mat';                  % File name of gridded data from preprocessing
 
-%% User forcing function (used if OPT_Forcing = 4)
+%% User forcing function Kyzylsu_forcing (forc_function = 'Kyzylsu_forcing')
 % Kyzylsu/Forcing/Kyzylsu_forcing.m builds the forcing as in the former launcher
 % (Case_study/Kyzylsu_distributed): Ta lapsed between Pluvio and AWS_3900m, other
-% variables from Pluvio. Station data: 01-Jun-2021 to 30-Sep-2023.
-CONFIG_vals.forc_function = 'Kyzylsu_forcing'; % Name of the forcing function (on the path, in Kyzylsu/Forcing)
+% variables from Pluvio. Station data: 01-Jun-2021 to 30-Sep-2023. No settings needed.
 
-%% Solar integration interval (used if OPT_Forcing = 2 or 4)
+%% Solar integration interval (used by all forcing functions except forcing_station_lapse)
 CONFIG_vals.t_bef = 0.5; % Integration interval for solar variables: hours or fractions before (former launcher: 0.5)
 CONFIG_vals.t_aft = 0.5; % Integration interval for solar variables: hours or fractions after (former launcher: 0.5)
-% Also needed for OPT_Forcing = 2 or 3 (not set for Kyzylsu):
-% CONFIG_vals.forc_meteo_folder = '';  % Sub-folder of Forcing/Bias_corrected and Forcing/Output_Downscaling
-% CONFIG_vals.OPT_RunBC = 0;           % OPT_Forcing = 3 only
+% Also needed for forcing_gridded or forcing_downscaling (not set for Kyzylsu):
+% CONFIG_vals.forc_meteo_name = '';    % forcing_gridded: 14 variable names; forcing_downscaling: <meteo_name> of the files
+% CONFIG_vals.forc_meteo_folder = '';  % forcing_gridded: sub-folder of Forcing/Bias_corrected and Forcing/Output_Downscaling
+% CONFIG_vals.OPT_RunBC = 0;           % forcing_downscaling: 1 = bias correction
