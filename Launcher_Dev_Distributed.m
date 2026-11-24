@@ -24,22 +24,22 @@
 %  9. DISPLAY OF THE RUN SETTINGS                   699-707
 % 10. METEOROLOGICAL FORCING: SET-UP                708-754     forcing function, before the time loop
 %      10.1  Solar variables (just for Lmax_day)    745-754
-% 11. TIME LOOP                                     755-1414
-%      11.1  Distributed forcing                    773-851     maps of a whole month, once per month
-%      11.2  Forcing of the time step               852-887
-%      11.3  Radiation part B                       888-901     sun position, terrain correction
-%      11.4  Carbon and other grids                 902-911
-%      11.5  Spatial initialization                 912-938     vector predefining
-%      11.6  Loop over cells (parfor)               939-1147    soil biogeochemistry, vegetation, hydrology
-%      11.7  After the loop over cells              1148-1162   sublimation, cell vectors back to grids
-%      11.8  Routing module                         1163-1192
-%      11.9  Avalanches                             1193-1210
-%      11.10 Catchment average snowline             1211-1217
-%      11.11 Fractured rock                         1218-1235
-%      11.12 Albedo map                             1236-1248
-%      11.13 Initial conditions for the next step   1249-1403
-%      11.14 Outputs and checkpoints                1404-1414   Output_Manager
-% 12. COMPUTATIONAL TIME                            1415-1421
+% 11. TIME LOOP                                     755-1418
+%      11.1  Distributed forcing                    773-855     maps of a whole month, once per month
+%      11.2  Forcing of the time step               856-891
+%      11.3  Radiation part B                       892-905     sun position, terrain correction
+%      11.4  Carbon and other grids                 906-915
+%      11.5  Spatial initialization                 916-942     vector predefining
+%      11.6  Loop over cells (parfor)               943-1151    soil biogeochemistry, vegetation, hydrology
+%      11.7  After the loop over cells              1152-1166   sublimation, cell vectors back to grids
+%      11.8  Routing module                         1167-1196
+%      11.9  Avalanches                             1197-1214
+%      11.10 Catchment average snowline             1215-1221
+%      11.11 Fractured rock                         1222-1239
+%      11.12 Albedo map                             1240-1252
+%      11.13 Initial conditions for the next step   1253-1407
+%      11.14 Outputs and checkpoints                1408-1418   Output_Manager
+% 12. COMPUTATIONAL TIME                            1419-1425
 % (line numbers of this version: they shift when lines are added or removed)
 %==========================================================================
 
@@ -723,8 +723,8 @@ if OPT_Aval == 0; disp('Avalanching: off'); else; disp('Avalanching: on'); end
 % F must contain Ta [C], Pr [mm per time step], U [RH, fraction or %], N [W m-2],
 % Ws [m s-1], Pre [hPa or Pa], SAB1, SAB2, SAD1, SAD2, PARB, PARD [W m-2, flat
 % surface: the terrain correction is applied here], and optionally Tdew [C].
-% Each is a scalar (same value at all hours and in all cells), a vector of nt
-% values (one per hour, same in all cells), or a matrix nt x num_cell.
+% Each must be a grid nt x num_cell (hours in rows, cells in columns), also for the
+% variables that are the same in all cells.
 if exist(forc_function,'file') ~= 2
     error('Forcing function not found on the path: %s', forc_function)
 end
@@ -784,27 +784,31 @@ for t = t_start:N_time_step
 
         %========= Forcing function (forc_function), all hours of the month ========
         size_time_in_month = numel(date_forMonth);
+
+        % Generate distributed forcing
         F = forc_fun('maps', Forc_data, date_forMonth, Forc_grid);
+            % forc_fun is the forcing function selected in the config file (e.g. forcing_station_lapse.m)
+            % Forc_data contains data needed by the the forcing function (e.g. lapse-rates, point-scale forcing, t_bef/t_aft)
+            % date_forMonth contains the date stamps for which the gridded forcing will be generated (dim: hours_in_month x 1)
+            % Forc_grid contains the grid information (DTM, coordinates, etc..)
+            % Output: F is a structure containing the forcing grid for each variable (hours_month x cell)
+
         if ~isfield(F,'Tdew'); forc_list = forc_vars; else; forc_list = [forc_vars {'Tdew'}]; end
-        for v = 1:numel(forc_list)
+
+        % Check that the forcing function generated grid with the correct sizes, return errors otherwise
+        for v = 1:numel(forc_list) % Each variable must be a grid of hours x cells
             if ~isfield(F,forc_list{v})
                 error('Forcing function %s: variable %s missing', forc_function, forc_list{v})
+            elseif ~isequal(size(F.(forc_list{v})), [size_time_in_month num_cell])
+                error('Forcing function %s: %s has size %dx%d, expected %dx%d (hours x cells)', ...
+                    forc_function, forc_list{v}, size(F.(forc_list{v}),1), size(F.(forc_list{v}),2), size_time_in_month, num_cell)
             end
-            val = double(F.(forc_list{v})); % expanded to time x cells
-            if isscalar(val)
-                val = repmat(val,size_time_in_month,num_cell); % same value at all hours and in all cells
-            elseif isvector(val) && numel(val) == size_time_in_month && size_time_in_month > 1
-                val = repmat(val(:),1,num_cell); % one value per hour, same in all cells
-            elseif isvector(val) && numel(val) == num_cell && size_time_in_month == 1
-                val = val(:)'; % one hour, one value per cell
-            elseif ~isequal(size(val),[size_time_in_month num_cell])
-                error('Forcing function %s: %s has size %dx%d, expected 1, %d (hours), or %dx%d (hours x cells)', ...
-                    forc_function, forc_list{v}, size(val,1), size(val,2), size_time_in_month, size_time_in_month, num_cell)
-            end
-            F.(forc_list{v}) = val;
         end
-        Ta_Sm = F.Ta; Pr_Sm = F.Pr; U_Sm = F.U; N_Sm = F.N; Ws_Sm = F.Ws; Pre_Sm = F.Pre;
-        SAB1_Sm = F.SAB1; SAB2_Sm = F.SAB2; SAD1_Sm = F.SAD1; SAD2_Sm = F.SAD2; PARB_Sm = F.PARB; PARD_Sm = F.PARD;
+        % Make sure all meteorological inputs are in double format
+        Ta_Sm = double(F.Ta); Pr_Sm = double(F.Pr); U_Sm = double(F.U); N_Sm = double(F.N);
+        Ws_Sm = double(F.Ws); Pre_Sm = double(F.Pre);
+        SAB1_Sm = double(F.SAB1); SAB2_Sm = double(F.SAB2); SAD1_Sm = double(F.SAD1);
+        SAD2_Sm = double(F.SAD2); PARB_Sm = double(F.PARB); PARD_Sm = double(F.PARD);
 
         % Corrections; U from forcing_station_lapse, forcing_gridded and forcing_downscaling is in %
         if max(U_Sm(:,MASKn==1),[],'all')>1
@@ -819,14 +823,14 @@ for t = t_start:N_time_step
 
         % Dew point temperature: from the function, or from Ta and U (same formula as forcing_station_lapse)
         if isfield(F,'Tdew')
-            Tdew_Sm = F.Tdew;
+            Tdew_Sm = double(F.Tdew);
         else
             a = 17.27; b = 237.3;
             xr = a.*Ta_Sm./(b+Ta_Sm) + log10(U_Sm);
             Tdew_Sm = b.*xr./(a-xr);
             clear a b xr
         end
-        clear F val v forc_list
+        clear F v forc_list
 
         %========= Further forcing steps for all types (functions in Forcing/) ==========
         % Glacier cooling effect on Ta and Tdew, and U recomputed: 1 = Shaw et al. (2025),

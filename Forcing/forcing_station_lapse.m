@@ -19,8 +19,7 @@
 % Info: structure with CONFIG (CONFIG_vals), Lat, Lon, DeltaGMT.
 % Settings read from CONFIG: forc_meteo_file, forc_meteo_name, ta_lapse_file,
 % ta_lapse_name, pr_lapse_file, pr_lapse_name, Meteo_el.
-% Outputs of 'maps': hours (rows) x cells (columns), or one value per hour
-% for the variables that are the same in all cells (Ws, SAD1, SAD2, PARD).
+% Outputs of 'maps': every variable as a grid of hours (rows) x cells (columns).
 %==========================================================================
 
 function out = forcing_station_lapse(mode, varargin)
@@ -137,7 +136,8 @@ switch mode
         out.Ta = Ta_Sm; out.Pr = Pr_Sm; out.N = N_Sm; out.Tdew = Tdew_Sm;
         out.SAB1 = SAB1_Sm; out.SAB2 = SAB2_Sm; out.PARB = PARB_Sm;
         %Same value in all cells: wind speed and diffuse radiation
-        out.Ws = Ws_P; out.SAD1 = SAD1_P; out.SAD2 = SAD2_P; out.PARD = PARD_P;
+        out.Ws = repmat(Ws_P(:),1,num_cell); out.SAD1 = repmat(SAD1_P(:),1,num_cell);
+        out.SAD2 = repmat(SAD2_P(:),1,num_cell); out.PARD = repmat(PARD_P(:),1,num_cell);
 
     otherwise
         error('forcing_station_lapse: unknown mode %s', mode)
