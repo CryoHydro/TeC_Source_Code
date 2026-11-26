@@ -51,6 +51,9 @@
 % Code explanation: This code launches TC model.
 %==========================================================================
 
+ROOT_Dir = 'C:\Users\ajoubert\Documents\GitHub\TeC_Source_Code\Case_study'; % To run examples from repository
+REPO_Dir = 'C:\Users\ajoubert\Documents\GitHub\TeC_Source_Code';
+
 %% CLEAR WORKSPACE
 %==========================================================================
 clc; clear;
@@ -733,6 +736,7 @@ end
 forc_fun = str2func(forc_function);
 Forc_info = struct('CONFIG',CONFIG_vals, 'Date',Date(:), 'Lat',Lat, 'Lon',Lon, 'DeltaGMT',IniCond.DeltaGMT);
 Forc_data = forc_fun('load', Directories.forc, Forc_info);
+
 if isfield(Forc_data,'t_bef') % Integration interval of the solar variables
     t_bef = Forc_data.t_bef; t_aft = Forc_data.t_aft;
 else
