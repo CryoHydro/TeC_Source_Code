@@ -444,8 +444,8 @@ Soil_Param.Phy = Phy;
 
 %%%%%%%%%% Interception Parameters    
 Interc_Param.Sp_SN_In=Sp_SN_In;
-Interc_Param.Sp_LAI_L_In=Sp_LAI_L_In;
-Interc_Param.Sp_LAI_H_In=Sp_LAI_H_In;
+Interc_Param.Sp_LAI_L_In=Sp_LAI_L_In';
+Interc_Param.Sp_LAI_H_In=Sp_LAI_H_In';
 Interc_Param.gcI=gcI;
 Interc_Param.KcI=KcI;
 

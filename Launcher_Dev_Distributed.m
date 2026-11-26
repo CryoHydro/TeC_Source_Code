@@ -62,7 +62,7 @@ clc; clear;
 site_num_list = [1 2 3 4]; % Please number sequentially
 site_name_list = {'Shallap' 'Torre_Orsina' 'Hybas_Lvl7_Catchment_2070497830','Kyzylsu'};
 num_sites = size(site_num_list,2);
-site_num = 4; % Choose site to run, this then selects the correct site directories
+site_num = 2; % Choose site to run, this then selects the correct site directories
 site_name = site_name_list{site_num};
 
 %% 2. CONFIGURATION
@@ -434,6 +434,7 @@ copyfile(Directories.config,[Directories.save 'Parameters/' 'Site_Config_TC.m'])
 Tmod = struct('clean_ice', [], 'TmodB', 0, 'TmodM', 1);
 if OPT_Decouple == 2 || OPT_Decouple == 3
     Tmod.TmodB = OPT_PARAM_vals.TmodB; % Tmod bias (positive reduces temperature over ice)
+    FPL = []; %Not necessary for these options
 end
 if OPT_Decouple == 3
     Tmod.TmodM = OPT_PARAM_vals.TmodM; % Tmod multiplier
@@ -679,9 +680,10 @@ tic ;
 
 %% 8. PARALLEL WORKERS
 %==========================================================================
-%
+
 % %if I am working on my personal computer define this - Think has 10 cores
-% if ~contains(Directories.root,"nfs")
+% currentFolder = pwd;
+% if ~contains(currentFolder,"nfs")
 %     numWorkers = 8;
 %     %Create a parallel pool with the specified number of workers
 %     poolobj = gcp('nocreate'); % Check if a pool already exists
@@ -945,16 +947,16 @@ for t = t_start:N_time_step
     % P = (Xout - 1) * 133 + Yout; AJ: What's this? To remove?
 
     % Follow=MASK; %Debugging
-    parfor ij = 1:num_cell % this is a parfor
+    parfor ij = 1:num_cell % this is a parfor %par
         % Good practice to use a simple for loop for debugging/testing
         % ij is the index to go pixel by pixel through the mask
         % ij=1:num_cell
         % disp(strcat('in the loop', ij))
 
-        % Debugging for a for loop
-        %         if ij == 3211
-        %             disp('wait') %261 first 6 cell
-        %         end
+%         % Debugging for a for loop
+%                 if ij == 41
+%                     disp('wait') %261 first 6 cell
+%                 end
         % =================================================================
 
         if MASKn(ij)== 1
