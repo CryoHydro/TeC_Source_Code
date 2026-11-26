@@ -37,6 +37,11 @@ CONFIG_vals.OPT_Decouple  = 1; % Glacier cooling effect on air temperature, over
                                % 2 = bias TmodB where Ta > 0,
                                % 3 = bias TmodB, then multiplier TmodM where Ta > 0
                                %     (TmodB, TmodM in Options_and_NoVegParams.xlsx)
+CONFIG_vals.OPT_MPType = "CLUSTER"; %If using "multipoint' type of Multipoint run (not "point') can choose type of points to run, POI = points of interest, 
+                               %"CLUSTER" = cluster points, "ALL" = all points. These should be give in the
+                               %Multipoints table under TYPE.
+							   
+CONFIG_vals.OPT_Forcing = 2; % Multipoint forcing option (temporarly)							   
 
 %% Meteorological forcing (used by forcing_station_lapse)
 CONFIG_vals.Meteo_el        = 3371;                      % Elevation of meteorological station [m a.s.l.]

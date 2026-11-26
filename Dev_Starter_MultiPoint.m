@@ -20,10 +20,10 @@ This code launches the Point Scale version of TC model.
 %% SITE SETUP
 %==========================================================================
 
-site_num_list = [1 2 3 4 5]; %Please number sequentially
-site_name_list = {'Shallap' 'Torre_Orsina' 'Hybas_Lvl7_Catchment_2070497830' 'Hybas_Lvl7_Catchment_2070497840' 'Pasterze'};
+site_num_list = [1 2 3 4 5 6]; %Please number sequentially
+site_name_list = {'Shallap' 'Torre_Orsina' 'Hybas_Lvl7_Catchment_2070497830' 'Hybas_Lvl7_Catchment_2070497840' 'Pasterze' 'Kyzylsu'};
 num_sites = size(site_num_list,2);
-site_num = 5; %Choose site to run, this then selects the correct site directories
+site_num = 6; %Choose site to run, this then selects the correct site directories
 site_name = site_name_list{site_num};
 
 % Choose point or multipoint
@@ -31,7 +31,7 @@ site_name = site_name_list{site_num};
 IniCond.mode = "point";
 
 % if point mode, then select the point
-selected_ID = 239; %(only if running on laptop, SLURM can be used to state when using HPC) 
+selected_ID = 10; %(only if running on laptop, SLURM can be used to state when using HPC) 
 
 %===================================================
 %% Load config info
@@ -74,16 +74,14 @@ Directories.save = ['Outputs/PointScale/' IniCond.run_folder '/'];  %Do we make 
 % Sub-path for forcings
 Directories.forc = [site_name '/Forcing']; 
 if OPT_Forcing == 1
-Directories.forc_meteo = [Directories.forc '/' CONFIG_vals.forc_meteo_file]; meteo_name = CONFIG_vals.forc_meteo_name;
-ta_lapse_file = CONFIG_vals.ta_lapse_file;  ta_lapse_name = CONFIG_vals.ta_lapse_name; %These are lapse rates per hour and month, in a table with a column with hour, a column with month, and a column with lapse rates (positive values)
-pr_lapse_file = CONFIG_vals.pr_lapse_file;  pr_lapse_name = CONFIG_vals.pr_lapse_name; %This is a structure Pr_lapse(m).month where each month has a linear model
-Meteo_el = CONFIG_vals.Meteo_el; %Elevation of station, used if OPT_forcing = 1
+    Directories.forc_meteo = [Directories.forc '/' CONFIG_vals.forc_meteo_file]; meteo_name = CONFIG_vals.forc_meteo_name;
+    ta_lapse_file = CONFIG_vals.ta_lapse_file;  ta_lapse_name = CONFIG_vals.ta_lapse_name; %These are lapse rates per hour and month, in a table with a column with hour, a column with month, and a column with lapse rates (positive values)
+    pr_lapse_file = CONFIG_vals.pr_lapse_file;  pr_lapse_name = CONFIG_vals.pr_lapse_name; %This is a structure Pr_lapse(m).month where each month has a linear model
+    Meteo_el = CONFIG_vals.Meteo_el; %Elevation of station, used if OPT_forcing = 1
 elseif OPT_Forcing == 2
-Directories.forc_meteo = [Directories.forc '/Clusters/biasCorrected/'];
-Directories.forc_meteoOD = [Directories.forc '/Clusters/downscaled/'];
-elseif OPT_Forcing == 3
-meteo_name = CONFIG_vals.forc_meteo_name; %e.g. 'Hybas_Lvl7_Catchment_2070497830_250m'
-end 
+    Directories.forc_meteo = [Directories.forc '/Clusters/biasCorrected/'];
+    Directories.forc_meteoOD = [Directories.forc '/Clusters/downscaled/'];
+end
 
 % Parameters
 Directories.Vegpar = [site_name '/Parameters/Parameters_TC.xlsx']; 
@@ -143,7 +141,7 @@ disp('Directories and folders done')
 
 % Points of interest
 %--------------------------------------------------------------------------
-POI = readtable([site_name,'/Multipoint/' site_name '_MultiPoints.csv']); %import table with points info
+POI = readtable([site_name,'/Multipoint/' site_name '_POINTS.csv']); %import table with points info
 UTM_zone = CONFIG_vals.UTM_zone;
 
 %PLEASE NOTE: ELEV as taken in within this file and H_DEB, are those
