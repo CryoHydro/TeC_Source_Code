@@ -322,7 +322,17 @@ if CONFIG_vals.OPT_Forcing == 1
     clear a b xr;
 
 elseif CONFIG_vals.OPT_Forcing == 2
-    
+
+    switch POI.TYPE{loc}
+        case 'POI'
+            forc_folder = 'POIs';
+        case 'CLUSTER'
+            forc_folder = 'Clusters';
+    end 
+
+    Directories.forc_meteo = [Directories.forc '/' forc_folder '/biasCorrected/'];
+    Directories.forc_meteoOD = [Directories.forc '/' forc_folder '/downscaled/'];
+
     %Load table of data for given point
     %This is for Tom type data
     forc_file = [Directories.forc_meteo char(Point) '.csv']; % Put here the path of where you downloaded the repository

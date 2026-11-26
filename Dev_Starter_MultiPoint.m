@@ -31,7 +31,7 @@ site_name = site_name_list{site_num};
 IniCond.mode = "point";
 
 % if point mode, then select the point
-selected_ID = 10; %(only if running on laptop, SLURM can be used to state when using HPC) 
+selected_ID = 3; %(only if running on laptop, SLURM can be used to state when using HPC) 
 
 %===================================================
 %% Load config info
@@ -73,6 +73,7 @@ Directories.save = ['Outputs/PointScale/' IniCond.run_folder '/'];  %Do we make 
 
 % Sub-path for forcings
 Directories.forc = [site_name '/Forcing']; 
+
 if OPT_Forcing == 1
     Directories.forc_meteo = [Directories.forc '/' CONFIG_vals.forc_meteo_file]; meteo_name = CONFIG_vals.forc_meteo_name;
     ta_lapse_file = CONFIG_vals.ta_lapse_file;  ta_lapse_name = CONFIG_vals.ta_lapse_name; %These are lapse rates per hour and month, in a table with a column with hour, a column with month, and a column with lapse rates (positive values)

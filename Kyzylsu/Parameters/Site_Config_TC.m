@@ -14,7 +14,7 @@ CONFIG_vals.UTM_zone      = 42;     % UTM zone for catchment
 CONFIG_vals.UTM_zone_text = '42 N'; % UTM zone for catchment (text)
 
 %% Run period and output folder
-CONFIG_vals.Run_StartDate = datetime(2021,10,01, 0,0,0); % Run start date and time (year,month,day, hour,min,sec)
+CONFIG_vals.Run_StartDate = datetime(2021,10,01, 1,0,0); % Run start date and time (year,month,day, hour,min,sec)
 CONFIG_vals.Run_EndDate   = datetime(2022,09,30, 23,0,0); % Run end date and time (last time step)
 CONFIG_vals.Run_Folder    = 'Kyzylsu_Q_fixed';           % Name of output run folder
 
@@ -37,6 +37,7 @@ CONFIG_vals.OPT_Decouple  = 1; % Glacier cooling effect on air temperature, over
                                % 2 = bias TmodB where Ta > 0,
                                % 3 = bias TmodB, then multiplier TmodM where Ta > 0
                                %     (TmodB, TmodM in Options_and_NoVegParams.xlsx)
+							   
 CONFIG_vals.OPT_MPType = "CLUSTER"; %If using "multipoint' type of Multipoint run (not "point') can choose type of points to run, POI = points of interest, 
                                %"CLUSTER" = cluster points, "ALL" = all points. These should be give in the
                                %Multipoints table under TYPE.
