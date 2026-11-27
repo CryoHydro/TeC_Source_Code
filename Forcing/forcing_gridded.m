@@ -4,15 +4,10 @@
 %
 % Reads monthly gridded forcing files (NOT compressed),
 % one file per variable and month:
-%   <forc_dir>/Bias_corrected/<forc_meteo_folder>/<yyyy>/<var>_<yyyy>_<m>.mat
-%       for t2m, d2m, tp, N, PARB, PARD, SAB1, SAB2, SAD1, SAD2
-%   <forc_dir>/Output_Downscaling/<forc_meteo_folder>/<yyyy>/<var>_<yyyy>_<m>.mat
-%       for RH, sp, ws10, strd
-% with <m> the month without leading zero. Each file holds a grid
-% rows x columns x hours (all hours of the month); the name of the variable
-% in each file is given by forc_meteo_name (14 names separated by spaces,
-% same order as the variables above: t2m d2m tp RH sp ws10 strd N PARB PARD
-% SAB1 SAB2 SAD1 SAD2).
+%   <forc_dir>/Gridded_Downscaling/biasCorrected/Var_yyyy_mm.nc
+%       for "Ta" "RH" "Pre" "Pr" "Ws" "N" "PARB" "PARD" "SAB1" "SAB2" "SAD1" "SAD2" "Swin"
+% with <mm> the month wit leading zeros. Each file holds a grid
+% rows x columns x hours (all hours of the month); each folder has all months of each variable (
 %
 % Called by Launcher_Dev_Distributed.m (same interface as a user forcing function):
 %   Forc_data = forcing_gridded('load', forc_dir, Info)
