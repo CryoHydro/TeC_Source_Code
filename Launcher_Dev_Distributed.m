@@ -6,40 +6,40 @@
 %==========================================================================
 % Section                                           Lines
 %--------------------------------------------------------------------------
-%  1. SITE SETUP                                    60-67       choice of the site (site_num)
-%  2. CONFIGURATION                                 68-115      Site_Config file (or TC_CONFIG variable)
-%      2.1   Model structure choices                85-115      forc_function, OPT_Veg_Param, OPT_Decouple
-%  3. DIRECTORIES                                   116-176     relative paths, run dates, restart
-%  4. OUTPUT FOLDERS                                177-192
-%  5. SPATIAL DATA                                  193-243     grids (dtm_file) and points of interest
-%  6. MODEL PARAMETERS                              244-664
-%      6.1   General options                        246-271     Options_and_NoVegParams.xlsx
-%      6.2   Vegetation parameters                  272-430     VPAR_T.xlsx, Parameters_TC.xlsx
-%      6.3   Glacier and snow parameters            431-513
-%      6.4   Carbon                                 514-527     CO2 series
-%      6.5   Topography and channel parameters      528-593     slope, aspect, flow directions, sky view
-%      6.6   Soil parameters                        594-664
-%  7. INITIAL CONDITIONS                            665-679
-%  8. PARALLEL WORKERS                              680-698     personal computer only
-%  9. DISPLAY OF THE RUN SETTINGS                   699-707
-% 10. METEOROLOGICAL FORCING: SET-UP                708-754     forcing function, before the time loop
-%      10.1  Solar variables (just for Lmax_day)    745-754
-% 11. TIME LOOP                                     755-1418
-%      11.1  Distributed forcing                    773-855     maps of a whole month, once per month
-%      11.2  Forcing of the time step               856-891
-%      11.3  Radiation part B                       892-905     sun position, terrain correction
-%      11.4  Carbon and other grids                 906-915
-%      11.5  Spatial initialization                 916-942     vector predefining
-%      11.6  Loop over cells (parfor)               943-1151    soil biogeochemistry, vegetation, hydrology
-%      11.7  After the loop over cells              1152-1166   sublimation, cell vectors back to grids
-%      11.8  Routing module                         1167-1196
-%      11.9  Avalanches                             1197-1214
-%      11.10 Catchment average snowline             1215-1221
-%      11.11 Fractured rock                         1222-1239
-%      11.12 Albedo map                             1240-1252
-%      11.13 Initial conditions for the next step   1253-1407
-%      11.14 Outputs and checkpoints                1408-1418   Output_Manager
-% 12. COMPUTATIONAL TIME                            1419-1425
+%  1. SITE SETUP                                    60-89       Root_Dir and site_name (launcher or job script)
+%  2. CONFIGURATION                                 90-163      Site_Config file (or TC_CONFIG), REPO_Dir
+%      2.1   Model structure choices                131-163     forc_function, OPT_Veg_Param, OPT_Decouple
+%  3. DIRECTORIES                                   164-235     paths (from Site_Dir, REPO_Dir), run dates, restart
+%  4. OUTPUT FOLDERS                                236-251
+%  5. SPATIAL DATA                                  252-302     grids (dtm_file) and points of interest
+%  6. MODEL PARAMETERS                              303-724
+%      6.1   General options                        305-330     Options_and_NoVegParams.xlsx
+%      6.2   Vegetation parameters                  331-489     VPAR_T.xlsx, Parameters_TC.xlsx
+%      6.3   Glacier and snow parameters            490-573
+%      6.4   Carbon                                 574-587     CO2 series
+%      6.5   Topography and channel parameters      588-653     slope, aspect, flow directions, sky view
+%      6.6   Soil parameters                        654-724
+%  7. INITIAL CONDITIONS                            725-739
+%  8. PARALLEL WORKERS                              740-759     personal computer only
+%  9. DISPLAY OF THE RUN SETTINGS                   760-768
+% 10. METEOROLOGICAL FORCING: SET-UP                769-816     forcing function, before the time loop
+%      10.1  Solar variables (just for Lmax_day)    807-816
+% 11. TIME LOOP                                     817-1480
+%      11.1  Distributed forcing                    835-917     maps of a whole month, once per month
+%      11.2  Forcing of the time step               918-953
+%      11.3  Radiation part B                       954-967     sun position, terrain correction
+%      11.4  Carbon and other grids                 968-977
+%      11.5  Spatial initialization                 978-1004    vector predefining
+%      11.6  Loop over cells (parfor)               1005-1213   soil biogeochemistry, vegetation, hydrology
+%      11.7  After the loop over cells              1214-1228   sublimation, cell vectors back to grids
+%      11.8  Routing module                         1229-1258
+%      11.9  Avalanches                             1259-1276
+%      11.10 Catchment average snowline             1277-1283
+%      11.11 Fractured rock                         1284-1301
+%      11.12 Albedo map                             1302-1314
+%      11.13 Initial conditions for the next step   1315-1469
+%      11.14 Outputs and checkpoints                1470-1480   Output_Manager
+% 12. COMPUTATIONAL TIME                            1481-1487
 % (line numbers of this version: they shift when lines are added or removed)
 %==========================================================================
 
@@ -59,25 +59,71 @@ clc; clear;
 
 %% 1. SITE SETUP
 %==========================================================================
-site_num_list = [1 2 3 4]; % Please number sequentially
-site_name_list = {'Shallap' 'Torre_Orsina' 'Pasterze','Kyzylsu'};
-num_sites = size(site_num_list,2);
-site_num = 3; % Choose site to run, this then selects the correct site directories
-site_name = site_name_list{site_num};
+% Two settings, given here OR in the HPC job script (the job script wins):
+%   Root_Dir  : working directory, the folder that contains the site folders
+%   site_name : name of the site folder inside Root_Dir
+% The site folder <Root_Dir>/<site_name> must contain Parameters/, Grids/, Forcing/
+% (and Multipoint/ for multipoint runs). Everything else is set in the config file
+% <site folder>/Parameters/Site_Config_TC.m.
+%
+% In an HPC job script (bash), before starting matlab:
+%   export TC_ROOT_DIR=/path/to/TC_setups
+%   export TC_SITE_NAME=Kyzylsu
+
+Root_Dir  = 'PATH_TO_REPO\TeC_Source_Code\Case_study'; % Working directory (folder of the site folders)
+site_name = 'Sitename';    % Site folder name. Case_study: {'Kyzylsu','Pasterze','Shallap','Torre_Orsina'}
+
+% Values from the job script, if given there (getenv returns '' when a variable is not set)
+if ~isempty(getenv('TC_ROOT_DIR'));  Root_Dir  = getenv('TC_ROOT_DIR');  end
+if ~isempty(getenv('TC_SITE_NAME')); site_name = getenv('TC_SITE_NAME'); end
+
+% Site folder: all site inputs are read from here 
+Site_Dir = fullfile(Root_Dir, site_name);
+
+if isempty(Root_Dir) || isempty(site_name)
+    error('Root_Dir and site_name must be set in section 1 of the launcher, or with TC_ROOT_DIR and TC_SITE_NAME')
+elseif ~isfolder(Site_Dir)
+    error('Site folder not found: %s (Root_Dir = %s, site_name = %s)', Site_Dir, Root_Dir, site_name)
+end
+fprintf('Site folder: %s\n', Site_Dir);
 
 %% 2. CONFIGURATION
 %==========================================================================
-% Sub-path for Config file
 % Config file: plain MATLAB script that defines the structure CONFIG_vals.
-% Another file can be chosen without editing this launcher, e.g. in an HPC job script:
-%   export TC_CONFIG=Kyzylsu/Parameters/Site_Config_Run03.m
+% By default <Site_Dir>/Parameters/Site_Config_TC.m. Another config of the same site
+% (e.g. to run several configs in parallel on the HPC) can be chosen in the job script:
+%   export TC_CONFIG=Site_Config_Run03.m           (file name: searched in <Site_Dir>/Parameters/)
+%   export TC_CONFIG=/path/to/Site_Config_Run03.m  (or a full path)
 Directories.config = getenv('TC_CONFIG');
+
 if isempty(Directories.config)
-    Directories.config = [site_name '/Parameters/Site_Config_TC.m'];
+    Directories.config = fullfile(Site_Dir,'Parameters','Site_Config_TC.m'); % default config
+elseif isempty(fileparts(Directories.config))
+    Directories.config = fullfile(Site_Dir,'Parameters',Directories.config); % file name only: in the site's Parameters/
 end
 if ~isfile(Directories.config); error('Config file not found: %s', Directories.config); end
+
 fprintf('Config file: %s\n', Directories.config);
 run(Directories.config); % defines CONFIG_vals
+
+% Safeguard: the config must belong to this site (catches a config of another site)
+if isfield(CONFIG_vals,'Site_name') && ~strcmp(CONFIG_vals.Site_name, site_name)
+    error('The config is for site %s, but site_name is %s: %s', CONFIG_vals.Site_name, site_name, Directories.config)
+end
+
+% Folder of the T&C code (REPO_Dir): Functions/, T&C_Code/ and Forcing/ are added to the
+% path in section 3. First found of:
+%   1. job script: export TC_REPO_DIR=/path/to/TeC_Source_Code
+%   2. config:     CONFIG_vals.REPO_Dir
+%   3. the folder of this launcher (it normally sits in the repository)
+%   4. the current folder (when the code is pasted in the command window, case 3 is empty)
+
+REPO_Dir = getenv('TC_REPO_DIR');
+if isempty(REPO_Dir) && isfield(CONFIG_vals,'REPO_Dir'); REPO_Dir = CONFIG_vals.REPO_Dir; end
+if isempty(REPO_Dir); REPO_Dir = fileparts(mfilename('fullpath')); end
+if isempty(REPO_Dir); REPO_Dir = pwd; end
+if ~isfolder(fullfile(REPO_Dir,'T&C_Code')); error('REPO_Dir is not the T&C repository (no T&C_Code folder): %s', REPO_Dir); end
+fprintf('T&C code: %s\n', REPO_Dir);
 
 IniCond.DeltaGMT = CONFIG_vals.DeltaGMT; % Define change from GMT
 IniCond.run_folder = CONFIG_vals.Run_Folder; % Define folder to save outputs
@@ -106,10 +152,12 @@ elseif isfield(CONFIG_vals,'forc_function') && ~isempty(CONFIG_vals.forc_functio
 else
     error('No forcing set: give CONFIG_vals.forc_function in the Site_Config file')
 end
+
 OPT_Veg_Param = CONFIG_vals.OPT_Veg_Param; % Choose if vegetation parameters (for Ccrown, Cwat, Crock, Curb, Cbare) are one value per landcover type (1), or gridded and variable per landcover (2).
 % For 1 change the values in VPAR_T directly, for 2 provide the grids in the
 % dtm_file. Note for 2 you still need the table to read the Veg_type names
 % but the values are not used.
+
 OPT_Decouple = CONFIG_vals.OPT_Decouple; % Glacier cooling effect on air temperature: 0 = off, 1 = Shaw et al. (2025),
 % 2 = bias TmodB, 3 = bias TmodB and multiplier TmodM (TmodB, TmodM in Options_and_NoVegParams.xlsx); all over clean ice only
 
@@ -118,12 +166,23 @@ OPT_Decouple = CONFIG_vals.OPT_Decouple; % Glacier cooling effect on air tempera
 % All paths are here
 %==========================================================================
 
-% Sub-path for outputs
-Directories.save = [site_name '/Outputs/Distributed/' IniCond.run_folder '/']; % Do we make this site specific?
+% Outputs: <Output_Dir>/<Run_Folder>/, Output_Dir from the job script, else the config,
+% else <Site_Dir>/Outputs/Distributed
+Output_Dir = fullfile(Site_Dir,'Outputs','Distributed'); % Default case
+
+% If Outputs want to be saved in a specific directory (defined in the config)
+if isfield(CONFIG_vals,'Output_Dir') && ~isempty(CONFIG_vals.Output_Dir); Output_Dir = CONFIG_vals.Output_Dir; end
+
+% If set in the job script (export TC_OUTPUT_DIR=/path/to/outputs), it replaces both cases above
+% (e.g. on the HPC, where the Windows Output_Dir of the config does not exist)
+if ~isempty(getenv('TC_OUTPUT_DIR')); Output_Dir = getenv('TC_OUTPUT_DIR'); end
+fprintf('Outputs: %s\n', fullfile(Output_Dir, IniCond.run_folder));
+
+Directories.save = [fullfile(Output_Dir, IniCond.run_folder) filesep]; % ends with a separator
 Directories.restart = Directories.save;
 
 % Sub-path for forcings
-Directories.forc = [site_name '/Forcing']; % Given to the forcing function; its files are read from here or from the path
+Directories.forc = fullfile(Site_Dir,'Forcing'); % Given to the forcing function; its files are read from here or from the path
 % Settings read by the forcing functions from CONFIG_vals:
 %   forcing_station_lapse : forc_meteo_file, forc_meteo_name, ta_lapse_file, ta_lapse_name,
 %                           pr_lapse_file, pr_lapse_name, Meteo_el
@@ -132,12 +191,12 @@ Directories.forc = [site_name '/Forcing']; % Given to the forcing function; its 
 %                           repository on the MATLAB path)
 
 % Parameters
-Directories.Vegpar = [site_name '/Parameters/Parameters_TC.xlsx'];
-Directories.Optpar = [site_name '/Parameters/Options_and_NoVegParams.xlsx'];
-Directories.VPAR = [site_name,'/Parameters/VPAR_T.xlsx'];
+Directories.Vegpar = fullfile(Site_Dir,'Parameters','Parameters_TC.xlsx');
+Directories.Optpar = fullfile(Site_Dir,'Parameters','Options_and_NoVegParams.xlsx');
+Directories.VPAR = fullfile(Site_Dir,'Parameters','VPAR_T.xlsx');
 
 % Preprocessing information
-Directories.PreProc = [site_name '/Grids/' CONFIG_vals.PreProc_folder '/']; % Directories.PreProc = [site_name '/Grids/'];
+Directories.PreProc = [fullfile(Site_Dir,'Grids',CONFIG_vals.PreProc_folder) filesep]; % ends with a separator
 dtm_file = CONFIG_vals.dtm_file;
 
 % Sub-path points of interest for discharge and multipoints
@@ -146,11 +205,11 @@ Directories.Points = [site_name,'/Multipoint/' site_name '_POINTS.csv']; %Table 
 %Directories.Multi = [site_name '/Multipoint/' site_name '_MultiPoints.txt']; %
 
 % Dependencies
-addpath(genpath('Functions')); % Where are distributed model set-up files (needed ? yes to load dtm)
-addpath(genpath([site_name '/Grids'])); % Where are distributed model set-up files (needed ? yes to load dtm)
-addpath(genpath([site_name '/Forcing'])); % Add path to Ca_Data
-addpath(genpath('T&C_Code')); % T&C source code
-addpath('Forcing'); % Forcing steps common to all forcing options (forcing_*.m)
+addpath(genpath(fullfile(REPO_Dir,'Functions'))); % Where are distributed model set-up files (needed ? yes to load dtm)
+addpath(genpath(fullfile(Site_Dir,'Grids'))); % Where are distributed model set-up files (needed ? yes to load dtm)
+addpath(genpath(fullfile(Site_Dir,'Forcing'))); % Site forcing files and user forcing functions
+addpath(genpath(fullfile(REPO_Dir,'T&C_Code'))); % T&C source code
+addpath(fullfile(REPO_Dir,'Forcing')); % Forcing steps common to all forcing options (forcing_*.m)
 
 % Modelling period and time
 %--------------------------------------------------------------------------
@@ -754,6 +813,7 @@ end
 forc_fun = str2func(forc_function);
 Forc_info = struct('CONFIG',CONFIG_vals, 'Date',Date(:), 'Lat',Lat, 'Lon',Lon, 'DeltaGMT',IniCond.DeltaGMT);
 Forc_data = forc_fun('load', Directories.forc, Forc_info);
+
 if isfield(Forc_data,'t_bef') % Integration interval of the solar variables
     t_bef = Forc_data.t_bef; t_aft = Forc_data.t_aft;
 else
