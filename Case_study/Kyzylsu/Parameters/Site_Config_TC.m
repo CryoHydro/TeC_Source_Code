@@ -23,11 +23,11 @@ CONFIG_vals.UTM_zone_text = '42 N'; % UTM zone for catchment (text)
 
 %% Run period 
 CONFIG_vals.Run_StartDate = datetime(2021,10,01, 1,0,0); % Run start date and time (year,month,day, hour,min,sec)
-CONFIG_vals.Run_EndDate   = datetime(2022,09,30, 23,0,0); % Run end date and time (last time step)
+CONFIG_vals.Run_EndDate   = datetime(2021,10,30, 23,0,0); % Run end date and time (last time step)
 
 % Run name and output directory
 CONFIG_vals.Run_Folder    = 'Kyzylsu_test';           % Name of output run folder
-CONFIG_vals.Output_Dir    = 'B:\home\Projects\MountAInWater\Modelling\TC_outputs\Kyzylsu';                          % Folder where the run folder is created; '' = <site folder>/Outputs/Distributed. Ignored if TC_OUTPUT_DIR is set in the job script
+CONFIG_vals.Output_Dir    = 'C:\Users\ajoubert\Documents\GitHub\TeC_Source_Code\Case_study\Kyzylsu\Outputs';                          % Folder where the run folder is created; '' = <site folder>/Outputs/Distributed. Ignored if TC_OUTPUT_DIR is set in the job script
 
 %% Restart
 CONFIG_vals.Restart_ID   = 0;                % 0 = new run, 1 = continue an unfinished run from its checkpoint
@@ -35,7 +35,7 @@ CONFIG_vals.Restart_Date = [];               % Date of the checkpoint to restart
 CONFIG_vals.Restart_Run  = 'Kyzylsu_Q_fixed'; % Name of run to restart from
 
 %% Model options
-CONFIG_vals.forc_function = 'forcing_station_lapse'; % Forcing function (maps built once per month):
+CONFIG_vals.forc_function = 'forcing_gridded'; % Forcing function (maps built once per month):
                                % 'forcing_station_lapse' = one station + lapse rates (settings below),
                                % 'forcing_gridded' = monthly gridded files, 'forcing_downscaling' = on-the-fly
                                % downscaling of ERA5-Land, or a user function, e.g. 'Kyzylsu_forcing' (below)
@@ -49,11 +49,11 @@ CONFIG_vals.OPT_Decouple  = 1; % Glacier cooling effect on air temperature, over
                                % 3 = bias TmodB, then multiplier TmodM where Ta > 0
                                %     (TmodB, TmodM in Options_and_NoVegParams.xlsx)
 							   
-CONFIG_vals.OPT_MPType = "CLUSTER"; %If using "multipoint' type of Multipoint run (not "point') can choose type of points to run, POI = points of interest, 
+CONFIG_vals.OPT_MPType = "POI"; %If using "multipoint' type of Multipoint run (not "point') can choose type of points to run, POI = points of interest, 
                                %"CLUSTER" = cluster points, "ALL" = all points. These should be give in the
                                %Multipoints table under TYPE.
 							   
-CONFIG_vals.OPT_Forcing = 1; % Multipoint forcing option (temporarly)							   
+%CONFIG_vals.OPT_Forcing = 1; % Multipoint forcing option (temporarly)							   
 
 %% Meteorological forcing (used by forcing_station_lapse)
 CONFIG_vals.Meteo_el        = 3371;                      % Elevation of meteorological station [m a.s.l.]
