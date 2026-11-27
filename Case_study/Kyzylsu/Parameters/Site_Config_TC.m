@@ -1,10 +1,18 @@
 %% SITE CONFIGURATION - Kyzylsu
 % Read by Launcher_Dev_Distributed.m with run(); defines the structure CONFIG_vals.
 % Empty values ([]) mean "not set".
-% On the HPC, another config file can be used without editing the launcher:
-%   export TC_CONFIG=Kyzylsu/Parameters/<other_config>.m   (in the job script, before matlab)
+% Found by the launcher at <Root_Dir>/<site_name>/Parameters/Site_Config_TC.m.
+% On the HPC, another config of this site can be used without editing the launcher:
+%   export TC_CONFIG=<other_config>.m   (in the job script, before matlab; file in this Parameters/ folder)
 
 CONFIG_vals = struct();
+
+%% T&C code
+% Folder of the T&C repository (Functions/, T&C_Code/, Forcing/). Optional: '' = the folder
+% of the launcher. Ignored if TC_REPO_DIR is set in the job script.
+% (The working directory and the site are set in the launcher or the job script, not here:
+% they are needed to find this file.)
+CONFIG_vals.REPO_Dir = 'C:\Users\ajoubert\Documents\GitHub\TeC_Source_Code';
 
 %% Site
 CONFIG_vals.Site_num  = 4;          % Site number
@@ -13,10 +21,13 @@ CONFIG_vals.DeltaGMT  = 5;          % Change in hours from GMT
 CONFIG_vals.UTM_zone      = 42;     % UTM zone for catchment
 CONFIG_vals.UTM_zone_text = '42 N'; % UTM zone for catchment (text)
 
-%% Run period and output folder
+%% Run period 
 CONFIG_vals.Run_StartDate = datetime(2021,10,01, 1,0,0); % Run start date and time (year,month,day, hour,min,sec)
 CONFIG_vals.Run_EndDate   = datetime(2022,09,30, 23,0,0); % Run end date and time (last time step)
-CONFIG_vals.Run_Folder    = 'Kyzylsu_Q_fixed';           % Name of output run folder
+
+% Run name and output directory
+CONFIG_vals.Run_Folder    = 'Kyzylsu_test';           % Name of output run folder
+CONFIG_vals.Output_Dir    = 'B:\home\Projects\MountAInWater\Modelling\TC_outputs\Kyzylsu';                          % Folder where the run folder is created; '' = <site folder>/Outputs/Distributed. Ignored if TC_OUTPUT_DIR is set in the job script
 
 %% Restart
 CONFIG_vals.Restart_ID   = 0;                % 0 = new run, 1 = continue an unfinished run from its checkpoint
@@ -42,7 +53,7 @@ CONFIG_vals.OPT_MPType = "CLUSTER"; %If using "multipoint' type of Multipoint ru
                                %"CLUSTER" = cluster points, "ALL" = all points. These should be give in the
                                %Multipoints table under TYPE.
 							   
-CONFIG_vals.OPT_Forcing = 2; % Multipoint forcing option (temporarly)							   
+CONFIG_vals.OPT_Forcing = 1; % Multipoint forcing option (temporarly)							   
 
 %% Meteorological forcing (used by forcing_station_lapse)
 CONFIG_vals.Meteo_el        = 3371;                      % Elevation of meteorological station [m a.s.l.]

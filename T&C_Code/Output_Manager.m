@@ -48,7 +48,7 @@ switch OM_phase
     %======================================================================
     case 'init'
     %======================================================================
-        OM_cfg = [site_name '/Parameters/Output_Config.m'];
+        OM_cfg = fullfile(Site_Dir,'Parameters','Output_Config.m');
         if ~isfile(OM_cfg)
             error('Output_Manager: configuration file not found: %s', OM_cfg);
         end
