@@ -15,7 +15,7 @@ CONFIG_vals.UTM_zone_text = '32 T'; % UTM zone for catchment (text)
 
 %% Run period and output folder
 CONFIG_vals.Run_StartDate = datetime(2022,6,1, 1,0,0); % Run start date and time (year,month,day, hour,min,sec)
-CONFIG_vals.Run_EndDate   = datetime(2022,7,31, 23,0,0); % Run end date and time (last time step)
+CONFIG_vals.Run_EndDate   = datetime(2022,6,15, 23,0,0); % Run end date and time (last time step)
 CONFIG_vals.Run_Folder    = 'Run_36';           % Name of output run folder
 
 %% Restart
@@ -24,7 +24,7 @@ CONFIG_vals.Restart_Date = [];               % Date of the checkpoint to restart
 CONFIG_vals.Restart_Run  = 'Run_36'; % Name of run to restart from
 
 %% Model options
-CONFIG_vals.forc_function   = 'fully_gridded'; % Type of forcing: 1 = from AWS which is distributed, 2 = fully gridded, 3 = on-the-fly downscaling,
+CONFIG_vals.forc_function   = 'forcing_gridded';  % Type of forcing: 'forcing_station_lapse' = from AWS which is distributed, 'forcing_gridded' = fully gridded, 'forcing_downscaling' = on-the-fly downscaling,
                                % 4 = user forcing function (maps built at each time step)
 CONFIG_vals.OPT_Veg_Param = 1; % Vegetation parameters (Ccrown, Cwat, Crock, Curb, Cbare):
                                % 1 = one value per landcover type (change the values in VPAR_T directly),

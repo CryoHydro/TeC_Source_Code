@@ -14,6 +14,7 @@
 %--------------------------------------------------------------------------
 OUT_set.map_format   = {'mat','netcdf'};  % Maps: 'mat', 'netcdf' or both
 OUT_set.point_format = {'csv','mat'};     % Points: 'csv', 'mat' or both
+OUT_set.point_type = {'ALL'};              %Points: 'POI, CLUSTER or ALL
 OUT_set.checkpoint_every_days = 30;       % Model days between two restart checkpoints
 OUT_set.keep_n_checkpoints    = 2;        % Number of checkpoints kept in Store/ (older ones deleted)
 OUT_set.single_precision      = true;     % Store outputs as single (half the size of double)
