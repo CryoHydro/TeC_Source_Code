@@ -60,9 +60,9 @@ clc; clear;
 %% 1. SITE SETUP
 %==========================================================================
 site_num_list = [1 2 3 4]; % Please number sequentially
-site_name_list = {'Shallap' 'Torre_Orsina' 'Hybas_Lvl7_Catchment_2070497830','Kyzylsu'};
+site_name_list = {'Shallap' 'Torre_Orsina' 'Pasterze','Kyzylsu'};
 num_sites = size(site_num_list,2);
-site_num = 2; % Choose site to run, this then selects the correct site directories
+site_num = 3; % Choose site to run, this then selects the correct site directories
 site_name = site_name_list{site_num};
 
 %% 2. CONFIGURATION
@@ -141,8 +141,9 @@ Directories.PreProc = [site_name '/Grids/' CONFIG_vals.PreProc_folder '/']; % Di
 dtm_file = CONFIG_vals.dtm_file;
 
 % Sub-path points of interest for discharge and multipoints
-Directories.POIs = [Directories.PreProc 'POI_' erase(dtm_file,'.mat') '.txt']; % POI_dtm_<Site>_<res>m.txt from the preprocessing (next to the dtm)
-Directories.Multi = [site_name '/Multipoint/' site_name '_MultiPoints.txt']; %
+Directories.Points = [site_name,'/Multipoint/' site_name '_POINTS.csv']; %Table of points, can be POI, CLUSTERS or both
+%Directories.POIs = [Directories.PreProc 'POI_' erase(dtm_file,'.mat') '.txt']; % POI_dtm_<Site>_<res>m.txt from the preprocessing (next to the dtm)
+%Directories.Multi = [site_name '/Multipoint/' site_name '_MultiPoints.txt']; %
 
 % Dependencies
 addpath(genpath('Functions')); % Where are distributed model set-up files (needed ? yes to load dtm)
@@ -208,22 +209,36 @@ UTM_X = x(floor(length(x)/2));
 
 % Load point data for saving
 %--------------------------------------------------------------------
-% POI file written by the preprocessing together with the dtm
-% (POI_dtm_<Site>_<res>m.txt, with at least the columns Name, col, row, idx)
-if ~isfile(Directories.POIs)
-    error('POI file not found: %s', Directories.POIs)
+if ~isfile(Directories.Points)
+    error('Points file not found: %s', Directories.Points)
 end
-Points = readtable(Directories.POIs,'Delimiter',',');
+Points = readtable(Directories.Points,'Delimiter',','); %import table with points info
+
+%PLEASE NOTE: ELEV as taken in within this file and H_DEB, are those
+%measured/stated at the site, not those extracted from the grid. Normally
+%the extracted values are used except in specific use cases. 
+
+%Choose point type for saving
+type = string(Points.TYPE);
+OPT_MPType = CONFIG_vals.OPT_MPType;
+if OPT_MPType == "POI"
+    id_torun = type == "POI";
+    Points = Points(id_torun,:);
+elseif OPT_MPType == "CLUSTER"
+    id_torun = type == "CLUSTER";
+    Points = Points(id_torun,:);
+end %If all then left as full list
+
 % Column names differ between sites (e.g. name/Name): use Name, col, row, idx
 vn = Points.Properties.VariableNames;
 for c = {'Name','col','row','idx'}
     k = find(strcmpi(vn,c{1}),1);
-    if isempty(k); error('Column "%s" missing in %s', c{1}, Directories.POIs); end
+    if isempty(k); error('Column "%s" missing in %s', c{1}, Directories.Points); end
     Points.Properties.VariableNames{k} = c{1};
 end
 Points.Name = strtrim(string(Points.Name));
 clear vn c k
-disp(['Points: ' num2str(height(Points)) ' POIs read from ' Directories.POIs])
+disp(['Points: ' num2str(height(Points)) ' POIs read from ' Directories.Points])
 % Consistency with the loaded dtm
 if any(Points.idx ~= sub2ind([m_cell n_cell], Points.row, Points.col))
     error('POI file: idx does not match row/col for the grid of %s', dtm_file)
