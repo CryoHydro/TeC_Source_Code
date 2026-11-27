@@ -200,7 +200,7 @@ Directories.PreProc = [fullfile(Site_Dir,'Grids',CONFIG_vals.PreProc_folder) fil
 dtm_file = CONFIG_vals.dtm_file;
 
 % Sub-path points of interest for discharge and multipoints
-Directories.Points = [site_name,'/Multipoint/' site_name '_POINTS.csv']; %Table of points, can be POI, CLUSTERS or both
+Directories.Points = fullfile(Site_Dir,'Multipoint',[site_name '_POINTS.csv']); % Table of points, can be POI, CLUSTER or both
 %Directories.POIs = [Directories.PreProc 'POI_' erase(dtm_file,'.mat') '.txt']; % POI_dtm_<Site>_<res>m.txt from the preprocessing (next to the dtm)
 %Directories.Multi = [site_name '/Multipoint/' site_name '_MultiPoints.txt']; %
 
