@@ -71,7 +71,7 @@ clc; clear;
 %   export TC_SITE_NAME=Kyzylsu
 
 Root_Dir  = 'C:\Users\ajoubert\Documents\GitHub\TeC_Source_Code\Case_study'; % Working directory (folder of the site folders)
-site_name = 'Kyzylsu';                                                         % Site folder name
+site_name = 'Kyzylsu';    % Site folder name. Case_study: {'Kyzylsu','Pasterze','Shallap','Torre_Orsina'}
 
 % Values from the job script, if given there (getenv returns '' when a variable is not set)
 if ~isempty(getenv('TC_ROOT_DIR'));  Root_Dir  = getenv('TC_ROOT_DIR');  end
