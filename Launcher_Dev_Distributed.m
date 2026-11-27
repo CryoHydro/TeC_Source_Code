@@ -529,8 +529,14 @@ end
 
 %% 6.4 Carbon
 %--------------------------------------------------------------------------
-load('Ca_Data.mat');
-% load([meteo_name '_Ca_Data.mat']); % TOM's FILE NAMING HAS SITE IN IT - PROVIDED BY THE PRE_PROCESSING SCRIPTS AT STEP 3
+if exist('Ca_Data.mat','file')==2
+    load('Ca_Data.mat');
+elseif exist([site_name '_Ca_Data.mat'],'file')==2
+    load([site_name '_Ca_Data.mat']); % TOM's FILE NAMING HAS SITE IN IT - PROVIDED BY THE PRE_PROCESSING SCRIPTS AT STEP 3
+else
+    disp("Ca Data file missing!")
+    return
+end
 
 d1 = find(abs(Date_CO2-datenum(Date(1)))<1/36);d2 = find(abs(Date_CO2-datenum(Date(end)))<1/36);
 Ca = Ca(d1:d2);
