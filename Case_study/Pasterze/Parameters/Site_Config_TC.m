@@ -7,7 +7,7 @@
 CONFIG_vals = struct();
 
 %% Site
-CONFIG_vals.Site_num  = 5;          % Site number
+CONFIG_vals.Site_num  = 3;          % Site number
 CONFIG_vals.Site_name = 'Pasterze';  % Site name
 CONFIG_vals.DeltaGMT  = 2;          % Change in hours from GMT
 CONFIG_vals.UTM_zone      = 32;     % UTM zone for catchment
@@ -15,7 +15,7 @@ CONFIG_vals.UTM_zone_text = '32 T'; % UTM zone for catchment (text)
 
 %% Run period and output folder
 CONFIG_vals.Run_StartDate = datetime(2022,6,1, 1,0,0); % Run start date and time (year,month,day, hour,min,sec)
-CONFIG_vals.Run_EndDate   = datetime(2022,7,31, 23,0,0); % Run end date and time (last time step)
+CONFIG_vals.Run_EndDate   = datetime(2022,6,15, 23,0,0); % Run end date and time (last time step)
 CONFIG_vals.Run_Folder    = 'Run_36';           % Name of output run folder
 
 %% Restart
@@ -24,7 +24,7 @@ CONFIG_vals.Restart_Date = [];               % Date of the checkpoint to restart
 CONFIG_vals.Restart_Run  = 'Run_36'; % Name of run to restart from
 
 %% Model options
-CONFIG_vals.OPT_Forcing   = 2; % Type of forcing: 1 = from AWS which is distributed, 2 = fully gridded, 3 = on-the-fly downscaling,
+CONFIG_vals.forc_function   = 'forcing_gridded';  % Type of forcing: 'forcing_station_lapse' = from AWS which is distributed, 'forcing_gridded' = fully gridded, 'forcing_downscaling' = on-the-fly downscaling,
                                % 4 = user forcing function (maps built at each time step)
 CONFIG_vals.OPT_Veg_Param = 1; % Vegetation parameters (Ccrown, Cwat, Crock, Curb, Cbare):
                                % 1 = one value per landcover type (change the values in VPAR_T directly),
@@ -55,7 +55,7 @@ CONFIG_vals.dtm_file       = 'dtm_Pasterze_250m.mat';                  % File na
 % Kyzylsu/Forcing/Kyzylsu_forcing.m builds the forcing as in the former launcher
 % (Case_study/Kyzylsu_distributed): Ta lapsed between Pluvio and AWS_3900m, other
 % variables from Pluvio. Station data: 01-Jun-2021 to 30-Sep-2023.
-CONFIG_vals.forc_function = ''; % Name of the forcing function (on the path, in Kyzylsu/Forcing)
+%CONFIG_vals.forc_function = ''; % Name of the forcing function (on the path, in Kyzylsu/Forcing)
 
 %% Solar integration interval (used if OPT_Forcing = 2 or 4)
 CONFIG_vals.t_bef = 1; % Integration interval for solar variables: hours or fractions before (former launcher: 0.5)

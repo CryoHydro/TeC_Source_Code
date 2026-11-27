@@ -200,8 +200,9 @@ Directories.PreProc = [fullfile(Site_Dir,'Grids',CONFIG_vals.PreProc_folder) fil
 dtm_file = CONFIG_vals.dtm_file;
 
 % Sub-path points of interest for discharge and multipoints
-Directories.POIs = [Directories.PreProc 'POI_' erase(dtm_file,'.mat') '.txt']; % POI_dtm_<Site>_<res>m.txt from the preprocessing (next to the dtm)
-Directories.Multi = fullfile(Site_Dir,'Multipoint',[site_name '_MultiPoints.txt']); %
+Directories.Points = fullfile(Site_Dir,'Multipoint',[site_name '_POINTS.csv']); % Table of points, can be POI, CLUSTER or both
+%Directories.POIs = [Directories.PreProc 'POI_' erase(dtm_file,'.mat') '.txt']; % POI_dtm_<Site>_<res>m.txt from the preprocessing (next to the dtm)
+%Directories.Multi = [site_name '/Multipoint/' site_name '_MultiPoints.txt']; %
 
 % Dependencies
 addpath(genpath(fullfile(REPO_Dir,'Functions'))); % Where are distributed model set-up files (needed ? yes to load dtm)
@@ -267,22 +268,36 @@ UTM_X = x(floor(length(x)/2));
 
 % Load point data for saving
 %--------------------------------------------------------------------
-% POI file written by the preprocessing together with the dtm
-% (POI_dtm_<Site>_<res>m.txt, with at least the columns Name, col, row, idx)
-if ~isfile(Directories.POIs)
-    error('POI file not found: %s', Directories.POIs)
+if ~isfile(Directories.Points)
+    error('Points file not found: %s', Directories.Points)
 end
-Points = readtable(Directories.POIs,'Delimiter',',');
+Points = readtable(Directories.Points,'Delimiter',','); %import table with points info
+
+%PLEASE NOTE: ELEV as taken in within this file and H_DEB, are those
+%measured/stated at the site, not those extracted from the grid. Normally
+%the extracted values are used except in specific use cases. 
+
+%Choose point type for saving
+type = string(Points.TYPE);
+OPT_MPType = CONFIG_vals.OPT_MPType;
+if OPT_MPType == "POI"
+    id_torun = type == "POI";
+    Points = Points(id_torun,:);
+elseif OPT_MPType == "CLUSTER"
+    id_torun = type == "CLUSTER";
+    Points = Points(id_torun,:);
+end %If all then left as full list
+
 % Column names differ between sites (e.g. name/Name): use Name, col, row, idx
 vn = Points.Properties.VariableNames;
 for c = {'Name','col','row','idx'}
     k = find(strcmpi(vn,c{1}),1);
-    if isempty(k); error('Column "%s" missing in %s', c{1}, Directories.POIs); end
+    if isempty(k); error('Column "%s" missing in %s', c{1}, Directories.Points); end
     Points.Properties.VariableNames{k} = c{1};
 end
 Points.Name = strtrim(string(Points.Name));
 clear vn c k
-disp(['Points: ' num2str(height(Points)) ' POIs read from ' Directories.POIs])
+disp(['Points: ' num2str(height(Points)) ' POIs read from ' Directories.Points])
 % Consistency with the loaded dtm
 if any(Points.idx ~= sub2ind([m_cell n_cell], Points.row, Points.col))
     error('POI file: idx does not match row/col for the grid of %s', dtm_file)
@@ -573,8 +588,14 @@ end
 
 %% 6.4 Carbon
 %--------------------------------------------------------------------------
-load('Ca_Data.mat');
-% load([meteo_name '_Ca_Data.mat']); % TOM's FILE NAMING HAS SITE IN IT - PROVIDED BY THE PRE_PROCESSING SCRIPTS AT STEP 3
+if exist('Ca_Data.mat','file')==2
+    load('Ca_Data.mat');
+elseif exist([site_name '_Ca_Data.mat'],'file')==2
+    load([site_name '_Ca_Data.mat']); % TOM's FILE NAMING HAS SITE IN IT - PROVIDED BY THE PRE_PROCESSING SCRIPTS AT STEP 3
+else
+    disp("Ca Data file missing!")
+    return
+end
 
 d1 = find(abs(Date_CO2-datenum(Date(1)))<1/36);d2 = find(abs(Date_CO2-datenum(Date(end)))<1/36);
 Ca = Ca(d1:d2);
